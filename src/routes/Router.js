@@ -3,6 +3,24 @@ import { Navigate, createBrowserRouter } from 'react-router';
 
 import Loadable from '../layouts/full/shared/loadable/Loadable';
 
+/* ***Sonrisas Panel**** */
+const ReferralHome = Loadable(lazy(() => import('../views/dashboard/ReferralHome')));
+
+const Referral = Loadable(lazy(() => import('../views/apps/referral/Referral')));
+const Refills = Loadable(lazy(() => import('../views/apps/refills/Refills')));
+const Commissions = Loadable(lazy(() => import('../views/apps/commissions/Commisions')));
+
+/* ***Auth Components**** */
+const ProtectedRoute = Loadable(lazy(() => import('../components/auth/ProtectedRoute')));
+
+/* ***Facturación**** */
+const FacturacionList = Loadable(lazy(() => import('../views/apps/facturacion/List')));
+const FacturacionDetail = Loadable(lazy(() => import('../views/apps/facturacion/Detail')));
+const FacturacionEdit = Loadable(lazy(() => import('../views/apps/facturacion/Edit')));
+
+/* ***Puntos y Canjes**** */
+const PointsAndExchanges = Loadable(lazy(() => import('../views/apps/points/PointsAndExchanges')));
+
 /* ***Layouts**** */
 const FullLayout = Loadable(lazy(() => import('../layouts/full/FullLayout')));
 const BlankLayout = Loadable(lazy(() => import('../layouts/blank/BlankLayout')));
@@ -22,8 +40,12 @@ const Tickets = Loadable(lazy(() => import('../views/apps/tickets/Tickets')));
 const Contacts = Loadable(lazy(() => import('../views/apps/contacts/Contacts')));
 const Ecommerce = Loadable(lazy(() => import('../views/apps/eCommerce/Ecommerce')));
 const EcommerceDetail = Loadable(lazy(() => import('../views/apps/eCommerce/EcommerceDetail')));
-const EcommerceAddProduct = Loadable(lazy(() => import('../views/apps/eCommerce/EcommerceAddProduct')));
-const EcommerceEditProduct = Loadable(lazy(() => import('../views/apps/eCommerce/EcommerceEditProduct')));
+const EcommerceAddProduct = Loadable(
+  lazy(() => import('../views/apps/eCommerce/EcommerceAddProduct')),
+);
+const EcommerceEditProduct = Loadable(
+  lazy(() => import('../views/apps/eCommerce/EcommerceEditProduct')),
+);
 const EcomProductList = Loadable(lazy(() => import('../views/apps/eCommerce/EcomProductList')));
 const EcomProductCheckout = Loadable(
   lazy(() => import('../views/apps/eCommerce/EcommerceCheckout')),
@@ -122,9 +144,9 @@ const MuiTransferList = Loadable(lazy(() => import('../views/ui-components/MuiTr
 const MuiTypography = Loadable(lazy(() => import('../views/ui-components/MuiTypography')));
 
 // authentication
-const Login = Loadable(lazy(() => import('../views/authentication/auth1/Login')));
+const Login = Loadable(lazy(() => import('../views/authentication/auth1/LoginNew')));
 const Login2 = Loadable(lazy(() => import('../views/authentication/auth2/Login2')));
-const Register = Loadable(lazy(() => import('../views/authentication/auth1/Register')));
+const Register = Loadable(lazy(() => import('../views/authentication/auth1/RegisterNew')));
 const Register2 = Loadable(lazy(() => import('../views/authentication/auth2/Register2')));
 const ForgotPassword = Loadable(lazy(() => import('../views/authentication/auth1/ForgotPassword')));
 const ForgotPassword2 = Loadable(
@@ -147,7 +169,6 @@ const PagePricing = Loadable(lazy(() => import('../views/pages/frontend-pages/Pr
 const BlogPage = Loadable(lazy(() => import('../views/pages/frontend-pages/Blog')));
 const BlogPost = Loadable(lazy(() => import('../views/pages/frontend-pages/BlogPost')));
 
-
 //mui charts
 const BarCharts = Loadable(lazy(() => import('../views/muicharts/barcharts/page')));
 const GaugeCharts = Loadable(lazy(() => import('../views/muicharts/gaugecharts/page')));
@@ -158,38 +179,267 @@ const ScatterCharts = Loadable(lazy(() => import('../views/muicharts/scatterchar
 const SparklineCharts = Loadable(lazy(() => import('../views/muicharts/sparklinecharts/page')));
 
 //mui tree
-const SimpletreeCustomization = Loadable(lazy(() => import('../views/mui-trees/simpletree/simpletree-customization/page')));
-const SimpletreeExpansion = Loadable(lazy(() => import('../views/mui-trees/simpletree/simpletree-expansion/page')));
-const SimpletreeFocus = Loadable(lazy(() => import('../views/mui-trees/simpletree/simpletree-focus/page')));
-const SimpletreeItems = Loadable(lazy(() => import('../views/mui-trees/simpletree/simpletree-items/page')));
-const SimpletreeSelection = Loadable(lazy(() => import('../views/mui-trees/simpletree/simpletree-selection/page')));
+const SimpletreeCustomization = Loadable(
+  lazy(() => import('../views/mui-trees/simpletree/simpletree-customization/page')),
+);
+const SimpletreeExpansion = Loadable(
+  lazy(() => import('../views/mui-trees/simpletree/simpletree-expansion/page')),
+);
+const SimpletreeFocus = Loadable(
+  lazy(() => import('../views/mui-trees/simpletree/simpletree-focus/page')),
+);
+const SimpletreeItems = Loadable(
+  lazy(() => import('../views/mui-trees/simpletree/simpletree-items/page')),
+);
+const SimpletreeSelection = Loadable(
+  lazy(() => import('../views/mui-trees/simpletree/simpletree-selection/page')),
+);
+
+//Referral register with code
+const ReferalRegister = Loadable(
+  lazy(() => import('../views/pages/referal-register/ReferalRegister')),
+);
 
 const Router = [
   {
     path: '/',
     element: <FullLayout />,
     children: [
-      { path: '/', element: <Navigate to="/dashboards/modern" /> },
-      { path: '/dashboards/modern', exact: true, element: <ModernDash /> },
-      { path: '/dashboards/ecommerce', exact: true, element: <EcommerceDash /> },
-      { path: '/apps/chats', element: <Chats /> },
-      { path: '/apps/notes', element: <Notes /> },
-      { path: '/apps/calendar', element: <Calendar /> },
-      { path: '/apps/email', element: <Email /> },
-      { path: '/apps/tickets', element: <Tickets /> },
-      { path: '/apps/contacts', element: <Contacts /> },
-      { path: '/apps/ecommerce/shop', element: <Ecommerce /> },
-      { path: '/apps/ecommerce/eco-product-list', element: <EcomProductList /> },
-      { path: '/apps/ecommerce/eco-checkout', element: <EcomProductCheckout /> },
-      { path: '/apps/ecommerce/add-product', element: <EcommerceAddProduct /> },
-      { path: '/apps/ecommerce/edit-product', element: <EcommerceEditProduct /> },
-      { path: '/apps/ecommerce/detail/:id', element: <EcommerceDetail /> },
-      { path: '/apps/kanban', element: <Kanban /> },
-      { path: '/apps/invoice/list', element: <InvoiceList /> },
-      { path: '/apps/invoice/create', element: <InvoiceCreate /> },
-      { path: '/apps/invoice/detail/:id', element: <InvoiceDetail /> },
-      { path: '/apps/invoice/edit/:id', element: <InvoiceEdit /> },
-      { path: '/apps/followers', element: <Followers /> },
+      { path: '/', element: <Navigate to="/home/dashboard" /> },
+      {
+        path: 'dashboards/modern',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <ModernDash />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'dashboards/ecommerce',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <EcommerceDash />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'home/dashboard',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <ReferralHome />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'home/referrals',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <Referral />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'home/refills',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <Refills />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'home/commissions',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <Commissions />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'home/points',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <PointsAndExchanges />
+          </ProtectedRoute>
+        ),
+      },
+
+      // Facturación routes
+      {
+        path: '/home/facturacion/list',
+        element: (
+          <ProtectedRoute>
+            <FacturacionList />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/home/facturacion/detail/:id',
+        element: (
+          <ProtectedRoute>
+            <FacturacionDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/home/facturacion/edit/:id',
+        element: (
+          <ProtectedRoute>
+            <FacturacionEdit />
+          </ProtectedRoute>
+        ),
+      },
+
+      {
+        path: '/apps/chats',
+        element: (
+          <ProtectedRoute>
+            <Chats />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/notes',
+        element: (
+          <ProtectedRoute>
+            <Notes />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/calendar',
+        element: (
+          <ProtectedRoute>
+            <Calendar />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/email',
+        element: (
+          <ProtectedRoute>
+            <Email />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/tickets',
+        element: (
+          <ProtectedRoute>
+            <Tickets />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/contacts',
+        element: (
+          <ProtectedRoute>
+            <Contacts />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/ecommerce/shop',
+        element: (
+          <ProtectedRoute>
+            <Ecommerce />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/ecommerce/eco-product-list',
+        element: (
+          <ProtectedRoute>
+            <EcomProductList />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/ecommerce/eco-checkout',
+        element: (
+          <ProtectedRoute>
+            <EcomProductCheckout />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/ecommerce/add-product',
+        element: (
+          <ProtectedRoute>
+            <EcommerceAddProduct />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/ecommerce/edit-product',
+        element: (
+          <ProtectedRoute>
+            <EcommerceEditProduct />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/ecommerce/detail/:id',
+        element: (
+          <ProtectedRoute>
+            <EcommerceDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/kanban',
+        element: (
+          <ProtectedRoute>
+            <Kanban />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/invoice/list',
+        element: (
+          <ProtectedRoute>
+            <InvoiceList />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/invoice/create',
+        element: (
+          <ProtectedRoute>
+            <InvoiceCreate />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/invoice/detail/:id',
+        element: (
+          <ProtectedRoute>
+            <InvoiceDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/invoice/edit/:id',
+        element: (
+          <ProtectedRoute>
+            <InvoiceEdit />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/apps/followers',
+        element: (
+          <ProtectedRoute>
+            <Followers />
+          </ProtectedRoute>
+        ),
+      },
       { path: '/apps/friends', element: <Friends /> },
       { path: '/apps/gallery', element: <Gallery /> },
       { path: '/user-profile', element: <UserProfile /> },
@@ -255,7 +505,6 @@ const Router = [
       { path: '/react-tables/sorting', element: <ReactSortingTable /> },
       { path: '/react-tables/sticky', element: <ReactStickyTable /> },
 
-
       { path: '/muicharts/barcharts', element: <BarCharts /> },
       { path: '/muicharts/gaugecharts', element: <GaugeCharts /> },
       { path: '/muicharts/linecharts/area', element: <AreaCharts /> },
@@ -264,7 +513,10 @@ const Router = [
       { path: '/muicharts/scattercharts', element: <ScatterCharts /> },
       { path: '/muicharts/sparklinecharts', element: <SparklineCharts /> },
 
-      { path: '/mui-trees/simpletree/simpletree-customization', element: <SimpletreeCustomization /> },
+      {
+        path: '/mui-trees/simpletree/simpletree-customization',
+        element: <SimpletreeCustomization />,
+      },
       { path: '/mui-trees/simpletree/simpletree-expansion', element: <SimpletreeExpansion /> },
       { path: '/mui-trees/simpletree/simpletree-focus', element: <SimpletreeFocus /> },
       { path: '/mui-trees/simpletree/simpletree-items', element: <SimpletreeItems /> },
@@ -296,6 +548,7 @@ const Router = [
       { path: '/frontend-pages/blog', element: <BlogPage /> },
       { path: '/frontend-pages/blog/detail/:id', element: <BlogPost /> },
       { path: '*', element: <Navigate to="/auth/404" /> },
+      { path: '/register-referral', element: <ReferalRegister /> },
     ],
   },
 ];

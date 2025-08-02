@@ -24,13 +24,10 @@ import {
 import { IconTrash } from '@tabler/icons-react';
 import { TicketContext } from 'src/context/TicketContext';
 
-
 const TicketListing = () => {
-  const { tickets, deleteTicket, searchTickets, ticketSearch, filter } =
-    useContext(TicketContext);
+  const { tickets, deleteTicket, searchTickets, ticketSearch, filter } = useContext(TicketContext);
 
   const theme = useTheme();
-
 
   const getVisibleTickets = (tickets, filter, ticketSearch) => {
     switch (filter) {
@@ -39,6 +36,23 @@ const TicketListing = () => {
           (c) => !c.deleted && c.ticketTitle.toLocaleLowerCase().includes(ticketSearch),
         );
 
+      case 'drivers':
+        return tickets.filter(
+          (c) =>
+            !c.deleted &&
+            c.Type === 'drivers' &&
+            c.ticketTitle.toLocaleLowerCase().includes(ticketSearch),
+        );
+
+      case 'passengers':
+        return tickets.filter(
+          (c) =>
+            !c.deleted &&
+            c.Type === 'passengers' &&
+            c.ticketTitle.toLocaleLowerCase().includes(ticketSearch),
+        );
+
+      // Mantenemos los filtros por Status por compatibilidad
       case 'Pending':
         return tickets.filter(
           (c) =>
@@ -67,22 +81,18 @@ const TicketListing = () => {
         throw new Error(`Unknown filter: ${filter}`);
     }
   };
-  const visibleTickets = getVisibleTickets(
-    tickets,
-    filter,
-    ticketSearch.toLowerCase()
-  );
+  const visibleTickets = getVisibleTickets(tickets, filter, ticketSearch.toLowerCase());
 
   const ticketBadge = (ticket) => {
     return ticket.Status === 'Open'
       ? theme.palette.success.light
       : ticket.Status === 'Closed'
-        ? theme.palette.error.light
-        : ticket.Status === 'Pending'
-          ? theme.palette.warning.light
-          : ticket.Status === 'Moderate'
-            ? theme.palette.primary.light
-            : 'primary';
+      ? theme.palette.error.light
+      : ticket.Status === 'Pending'
+      ? theme.palette.warning.light
+      : ticket.Status === 'Moderate'
+      ? theme.palette.primary.light
+      : 'primary';
   };
 
   return (

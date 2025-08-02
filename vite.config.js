@@ -35,10 +35,21 @@ export default defineConfig({
       ],
     },
   },
+  server: {
+    proxy: {
+      '/api-taxis': {
+        target: 'https://taxisonrisas.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-taxis/, ''),
+        secure: false,
+      },
+    },
+  },
 
-  // plugins: [react(),svgr({
-  //   exportAsDefault: true
-  // })],
-
-  plugins: [svgr(), react()],
+  plugins: [
+    svgr({
+      exportAsDefault: true,
+    }),
+    react(),
+  ],
 });

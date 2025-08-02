@@ -6,10 +6,9 @@ import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Link from '@mui/material/Link';
 import { NavLink } from 'react-router';
 
-import breadcrumbImg from 'src/assets/images/breadcrumb/ChatBc.png';
 import { IconCircle } from '@tabler/icons';
 
-const Breadcrumb = ({ subtitle, items, title, children }) => (
+const Breadcrumb = ({ subtitle, items, title, children, alternativeColor }) => (
   <Grid
     container
     sx={{
@@ -40,16 +39,23 @@ const Breadcrumb = ({ subtitle, items, title, children }) => (
       >
         {items
           ? items.map((item) => (
-            <div key={item.title}>
-              {item.to ? (
-                <Link underline="none" color="inherit" component={NavLink} to={item.to}>
-                  {item.title}
-                </Link>
-              ) : (
-                <Typography color="textPrimary">{item.title}</Typography>
-              )}
-            </div>
-          ))
+              <div key={item.title}>
+                {item.to ? (
+                  <Link
+                    underline="none"
+                    sx={{ color: alternativeColor || 'textSecondary' }}
+                    component={NavLink}
+                    to={item.to}
+                  >
+                    {item.title}
+                  </Link>
+                ) : (
+                  <Typography sx={{ color: alternativeColor || 'textSecondary' }}>
+                    {item.title}
+                  </Typography>
+                )}
+              </div>
+            ))
           : ''}
       </Breadcrumbs>
     </Grid>
@@ -62,15 +68,7 @@ const Breadcrumb = ({ subtitle, items, title, children }) => (
           width: '100%',
         }}
       >
-        {children ? (
-          <Box sx={{ top: '0px', position: 'absolute' }}>{children}</Box>
-        ) : (
-          <>
-            <Box sx={{ top: '0px', position: 'absolute' }}>
-              <img src={breadcrumbImg} alt={breadcrumbImg} width={'165px'} />
-            </Box>
-          </>
-        )}
+        {children ? <Box sx={{ top: '0px', position: 'absolute' }}>{children}</Box> : <></>}
       </Box>
     </Grid>
   </Grid>

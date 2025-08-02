@@ -23,14 +23,13 @@ const Expence = () => {
       },
       height: 120,
     },
-    labels: ["Profit", "Revenue", "Expance"],
+    labels: ['Profit', 'Revenue', 'Expance'],
     colors: [primary, error, secondary],
     plotOptions: {
       pie: {
-        
         donut: {
           size: '70%',
-          background: 'transparent'
+          background: 'transparent',
         },
       },
     },

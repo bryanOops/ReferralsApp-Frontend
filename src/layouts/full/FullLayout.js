@@ -10,7 +10,8 @@ import Customizer from './shared/customizer/Customizer';
 import Navigation from './horizontal/navbar/Navbar';
 import ScrollToTop from '../../components/shared/ScrollToTop';
 import LoadingBar from '../../LoadingBar';
-
+import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const MainWrapper = styled('div')(() => ({
   display: 'flex',
@@ -21,7 +22,7 @@ const MainWrapper = styled('div')(() => ({
 const PageWrapper = styled('div')(() => ({
   display: 'flex',
   flexGrow: 1,
-  paddingBottom: '60px',
+  paddingBottom: '40px',
   flexDirection: 'column',
   zIndex: 1,
   width: '100%',
@@ -30,17 +31,17 @@ const PageWrapper = styled('div')(() => ({
 
 const FullLayout = () => {
   const { activeLayout, isLayout, activeMode, isCollapse } = useContext(CustomizerContext);
-
-
+  const location = useLocation();
   const theme = useTheme();
   const MiniSidebarWidth = config.miniSidebarWidth;
 
+  useEffect(() => {
+    console.log('Ruta actual:', location.pathname);
+  }, [location.pathname]);
   return (
     <>
       <LoadingBar />
-      <MainWrapper
-        className={activeMode === 'dark' ? 'darkbg mainwrapper' : 'mainwrapper'}
-      >
+      <MainWrapper className={activeMode === 'dark' ? 'darkbg mainwrapper' : 'mainwrapper'}>
         {/* ------------------------------------------- */}
         {/* Sidebar */}
         {/* ------------------------------------------- */}
@@ -51,7 +52,7 @@ const FullLayout = () => {
         <PageWrapper
           className="page-wrapper"
           sx={{
-            ...(isCollapse === "mini-sidebar" && {
+            ...(isCollapse === 'mini-sidebar' && {
               [theme.breakpoints.up('lg')]: { ml: `${MiniSidebarWidth}px` },
             }),
           }}
@@ -67,7 +68,7 @@ const FullLayout = () => {
           <Container
             sx={{
               pt: '30px',
-              maxWidth: isLayout === 'boxed' ? 'lg' : '100%!important',
+              maxWidth: isLayout === 'boxed' ? '90%!important' : '100%!important',
             }}
           >
             {/* ------------------------------------------- */}
@@ -86,7 +87,6 @@ const FullLayout = () => {
         </PageWrapper>
       </MainWrapper>
     </>
-
   );
 };
 

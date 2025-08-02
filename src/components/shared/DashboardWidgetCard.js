@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { Card, CardContent, Typography, Box, Stack } from '@mui/material';
-import { CustomizerContext } from "src/context/CustomizerContext";
+import { CustomizerContext } from 'src/context/CustomizerContext';
 
 import { IconGridDots } from '@tabler/icons';
 
@@ -13,16 +13,21 @@ const DashboardWidgetCard = ({
   dataItem1,
   dataLabel2,
   dataItem2,
+  alternativeColor,
+  alternativeJustifyContent,
 }) => {
   const { isCardShadow } = useContext(CustomizerContext);
-
 
   const theme = useTheme();
   const borderColor = theme.palette.grey[100];
 
   return (
     <Card
-      sx={{ padding: 0, border: !isCardShadow ? `1px solid ${borderColor}` : 'none' }}
+      sx={{
+        padding: 0,
+        border: !isCardShadow ? `1px solid ${borderColor}` : 'none',
+        height: '100%',
+      }}
       elevation={isCardShadow ? 9 : 0}
       variant={!isCardShadow ? 'outlined' : undefined}
     >
@@ -32,7 +37,7 @@ const DashboardWidgetCard = ({
             {title ? <Typography variant="h5">{title}</Typography> : ''}
 
             {subtitle ? (
-              <Typography variant="subtitle2" color="textSecondary">
+              <Typography variant="subtitle2" sx={{ color: alternativeColor || 'textSecondary' }}>
                 {subtitle}
               </Typography>
             ) : (
@@ -43,7 +48,12 @@ const DashboardWidgetCard = ({
 
         {children}
 
-        <Stack direction="row" spacing={2} justifyContent="space-between" mt={2}>
+        <Stack
+          direction="row"
+          spacing={8}
+          mt={2}
+          sx={{ justifyContent: alternativeJustifyContent || 'space-between' }}
+        >
           <Stack direction="row" spacing={2} alignItems="center">
             <Box
               width={38}
@@ -63,7 +73,7 @@ const DashboardWidgetCard = ({
               </Typography>
             </Box>
             <Box>
-              <Typography variant="subtitle2" color="textSecondary">
+              <Typography variant="subtitle2" sx={{ color: alternativeColor || 'textSecondary' }}>
                 {dataLabel1}
               </Typography>
               <Typography variant="h6" fontWeight="600">
@@ -90,7 +100,7 @@ const DashboardWidgetCard = ({
               </Typography>
             </Box>
             <Box>
-              <Typography variant="subtitle2" color="textSecondary">
+              <Typography variant="subtitle2" sx={{ color: alternativeColor || 'textSecondary' }}>
                 {dataLabel2}
               </Typography>
               <Typography variant="h6" fontWeight="600">

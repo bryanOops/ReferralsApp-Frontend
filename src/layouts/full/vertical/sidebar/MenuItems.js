@@ -56,14 +56,92 @@ import {
   IconChartPpf,
   IconChartArcs3,
   IconListTree,
+  IconHome,
+  IconUsers,
+  IconCreditCard,
+  IconPercentage,
+  IconReceiptDollar,
+  IconGift,
 } from '@tabler/icons-react';
 
-const Menuitems = [
+// Control para mostrar solo Panel o todas las opciones
+const SHOW_ONLY_PANEL = true; // Cambiar a false para mostrar todas las opciones
+
+// Opciones del Panel
+const panelItems = [
   {
     navlabel: true,
-    subheader: 'Home',
+    subheader: 'Panel',
   },
+  {
+    id: uniqueId(),
+    title: 'Inicio',
+    icon: IconHome,
+    href: '/home/dashboard',
+    chip: '',
+    chipColor: 'secondary',
+  },
+  {
+    id: uniqueId(),
+    title: 'Referidos',
+    icon: IconUsers,
+    href: '/home/referrals',
+    chip: '',
+    chipColor: 'secondary',
+  },
+  {
+    id: uniqueId(),
+    title: 'Recargas',
+    icon: IconCreditCard,
+    href: '/home/refills',
+    chip: '',
+    chipColor: 'secondary',
+  },
+  {
+    id: uniqueId(),
+    title: 'Comisiones',
+    icon: IconPercentage,
+    href: '/home/commissions',
+    chip: '',
+    chipColor: 'secondary',
+  },
+  {
+    id: uniqueId(),
+    title: 'Facturación',
+    icon: IconReceiptDollar,
+    href: '/home/facturacion/list',
+    children: [
+      {
+        id: uniqueId(),
+        title: 'Lista',
+        icon: IconPoint,
+        href: '/home/facturacion/list',
+      },
+      {
+        id: uniqueId(),
+        title: 'Detalles',
+        icon: IconPoint,
+        href: '/home/facturacion/detail/FAC-001',
+      },
+    ],
+  },
+  {
+    id: uniqueId(),
+    title: 'Puntos y Canje',
+    icon: IconGift,
+    href: '/home/points',
+    chip: '',
+    chipColor: 'secondary',
+  },
+];
 
+// Todas las opciones (Panel + Apps + demás secciones)
+const allItems = [
+  ...panelItems,
+  {
+    navlabel: true,
+    subheader: 'Apps',
+  },
   {
     id: uniqueId(),
     title: 'Modern',
@@ -127,10 +205,6 @@ const Menuitems = [
         href: '/frontend-pages/pricing',
       },
     ],
-  },
-  {
-    navlabel: true,
-    subheader: 'Apps',
   },
   {
     id: uniqueId(),
@@ -997,5 +1071,8 @@ const Menuitems = [
     href: 'https://google.com',
   },
 ];
+
+// Exportar el array según la configuración
+const Menuitems = SHOW_ONLY_PANEL ? panelItems : allItems;
 
 export default Menuitems;

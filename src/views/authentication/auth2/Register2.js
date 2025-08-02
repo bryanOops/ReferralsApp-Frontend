@@ -54,7 +54,7 @@ const Register2 = () => (
                       color: 'primary.main',
                     }}
                   >
-                    Sign In
+                    Sign Insss
                   </Typography>
                 </Stack>
               }

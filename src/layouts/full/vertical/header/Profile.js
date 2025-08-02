@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Box, Menu, Avatar, Typography, Divider, Button, IconButton } from '@mui/material';
 import * as dropdownData from './data';
 
@@ -9,14 +9,28 @@ import { Stack } from '@mui/system';
 import ProfileImg from 'src/assets/images/profile/user-1.jpg';
 import unlimitedImg from 'src/assets/images/backgrounds/unlimited-bg.png';
 import Scrollbar from 'src/components/custom-scroll/Scrollbar';
+import { useAuth } from 'src/context/AuthContext';
 
 const Profile = () => {
   const [anchorEl2, setAnchorEl2] = useState(null);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
   const handleClick2 = (event) => {
     setAnchorEl2(event.currentTarget);
   };
   const handleClose2 = () => {
     setAnchorEl2(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setAnchorEl2(null); // Cerrar el menú
+      navigate('/auth/login');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   return (
@@ -80,7 +94,7 @@ const Profile = () => {
                   gap={1}
                 >
                   <IconMail width={15} height={15} />
-                  info@modernize.com
+                  info@sonrisas.com
                 </Typography>
               </Box>
             </Stack>
@@ -152,14 +166,8 @@ const Profile = () => {
                   <img src={unlimitedImg} alt="unlimited" className="signup-bg"></img>
                 </Box>
               </Box>
-              <Button
-                to="/auth/login"
-                variant="outlined"
-                color="primary"
-                component={Link}
-                fullWidth
-              >
-                Logout
+              <Button onClick={handleLogout} variant="outlined" color="primary" fullWidth>
+                Cerrar Sesión
               </Button>
             </Box>
           </Box>
