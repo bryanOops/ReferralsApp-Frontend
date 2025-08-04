@@ -1,20 +1,17 @@
-import React, { useContext } from 'react';
-import Chart from 'react-apexcharts';
+import React from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Stack, Typography, Avatar, Box, CardContent } from '@mui/material';
+import { Stack, Typography, Avatar, Box, CardContent, Alert } from '@mui/material';
 import DashboardCard from '../../shared/DashboardCard';
 import icon2 from '../../../assets/images/svgs/icon-user-male.svg';
 import iconPassenger from '../../../assets/images/svgs/icon-user-passenger.svg';
 import Grid from '@mui/material/Grid2';
-import { TicketContext } from 'src/context/TicketContext';
+import { useReferralCodes } from '../../../context/ReferralCodesContext';
+import ReferralCounterCard from './ReferralCounterCard';
+import ReferralCodeInfo from './ReferralCodeInfo';
+import ReferralStatsSummary from './ReferralStatsSummary';
 
 const MyReferrals = () => {
-  // Get ticket data from context
-  const { tickets } = useContext(TicketContext);
-
-  // Calculate dynamic counts
-  const driversCount = tickets.filter((t) => t.Type === 'Conductor' && !t.deleted).length;
-  const passengersCount = tickets.filter((t) => t.Type === 'Pasajero' && !t.deleted).length;
+  const { driversCount, passengersCount, loading, error } = useReferralCodes();
 
   // chart color
   const theme = useTheme();
@@ -91,32 +88,30 @@ const MyReferrals = () => {
       alternativeColor="#7C8FAC"
     >
       <>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Error al cargar los datos de referidos: {error.message}
+          </Alert>
+        )}
+
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 12, lg: 12 }}>
-            <Box bgcolor={'primary.light'} textAlign="center">
-              <CardContent sx={{ height: '170px', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={icon2} alt={icon2} width="50" />
-                <Typography color={'primary.main'} mt={1} variant="subtitle1" fontWeight={600}>
-                  Conductores
-                </Typography>
-                <Typography color={'primary.main'} variant="h4" fontWeight={600}>
-                  {driversCount}
-                </Typography>
-              </CardContent>
-            </Box>
+            <ReferralCounterCard
+              icon={icon2}
+              title="Conductores"
+              count={driversCount}
+              loading={loading}
+              color="primary"
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 12, lg: 12 }}>
-            <Box bgcolor={'secondary.light'} textAlign="center">
-              <CardContent sx={{ height: '170px', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={iconPassenger} alt={iconPassenger} width="50" />
-                <Typography color={'secondary.main'} mt={1} variant="subtitle1" fontWeight={600}>
-                  Pasajeros
-                </Typography>
-                <Typography color={'secondary.main'} variant="h4" fontWeight={600}>
-                  {passengersCount}
-                </Typography>
-              </CardContent>
-            </Box>
+            <ReferralCounterCard
+              icon={iconPassenger}
+              title="Pasajeros"
+              count={passengersCount}
+              loading={loading}
+              color="secondary"
+            />
           </Grid>
         </Grid>
       </>

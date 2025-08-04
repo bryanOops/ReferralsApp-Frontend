@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   CardContent,
@@ -8,6 +8,12 @@ import {
   Typography,
   LinearProgress,
   Fab,
+  IconButton,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { useTheme } from '@mui/material/styles';
@@ -16,7 +22,15 @@ import DashboardCard from '../../shared/DashboardCard';
 
 import iconEarnings from '../../../assets/images/svgs/earning-code.svg';
 import iconCopyMyCode from '../../../assets/images/svgs/earning-copy-my-code.svg';
-import { IconCopy, IconShare } from '@tabler/icons-react';
+import {
+  IconCopy,
+  IconShare,
+  IconCheck,
+  IconBrandWhatsapp,
+  IconBrandTelegram,
+  IconBrandFacebook,
+} from '@tabler/icons-react';
+import { useReferralStats } from '../../../hooks/useReferralStats';
 
 const EarningCodeBanner = () => {
   const theme = useTheme();
@@ -26,6 +40,65 @@ const EarningCodeBanner = () => {
   const primary = theme.palette.primary.main;
   const borderColor = theme.palette.grey[100];
   const value = 65;
+
+  // Usar datos reales de referidos
+  const { referralCode, totalReferrals, loading } = useReferralStats();
+
+  const [copied, setCopied] = useState(false);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
+
+  const handleCopyCode = async () => {
+    if (referralCode) {
+      try {
+        await navigator.clipboard.writeText(referralCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (error) {
+        console.error('Error copiando código:', error);
+      }
+    }
+  };
+
+  const handleShareClick = (event) => {
+    setShareAnchorEl(event.currentTarget);
+  };
+
+  const handleShareClose = () => {
+    setShareAnchorEl(null);
+  };
+
+  const handleShare = (platform) => {
+    const text = `¡Únete a SONRISAS usando mi código de referido: ${referralCode}! Tu taxi de confianza.`;
+    const url = window.location.origin; // URL de la aplicación
+
+    let shareUrl = '';
+
+    switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(
+          text,
+        )}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+          url,
+        )}&quote=${encodeURIComponent(text)}`;
+        break;
+
+      default:
+        break;
+    }
+
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+
+    handleShareClose();
+  };
+
   return (
     <Paper
       sx={{
@@ -142,7 +215,7 @@ const EarningCodeBanner = () => {
                         Mi código
                       </Typography>
                       <Typography variant="h8" fontWeight="600" mt={0.2} sx={{ color: '#7C8FAC' }}>
-                        CARLOS2024
+                        {loading ? 'Cargando...' : referralCode || 'No disponible'}
                       </Typography>
                     </Box>
                   </Box>
@@ -154,8 +227,21 @@ const EarningCodeBanner = () => {
                       ml: { xs: 0, sm: 0, md: 0, lg: 3 },
                     }}
                   >
-                    <IconCopy size={28} />
-                    <IconShare size={28} />
+                    <Tooltip title={copied ? '¡Copiado!' : 'Copiar código'}>
+                      <IconButton
+                        onClick={handleCopyCode}
+                        disabled={!referralCode}
+                        size="small"
+                        sx={{ color: copied ? 'success.main' : 'inherit' }}
+                      >
+                        {copied ? <IconCheck size={20} /> : <IconCopy size={20} />}
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Compartir código">
+                      <IconButton onClick={handleShareClick} disabled={!referralCode} size="small">
+                        <IconShare size={20} />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </CardContent>
               </DashboardCard>
@@ -163,6 +249,40 @@ const EarningCodeBanner = () => {
           </Grid>
         </Box>
       </CardContent>
+
+      {/* Menú de compartir */}
+      <Menu
+        anchorEl={shareAnchorEl}
+        open={Boolean(shareAnchorEl)}
+        onClose={handleShareClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={() => handleShare('whatsapp')}>
+          <ListItemIcon>
+            <IconBrandWhatsapp size={20} color="#25D366" />
+          </ListItemIcon>
+          <ListItemText>WhatsApp</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleShare('telegram')}>
+          <ListItemIcon>
+            <IconBrandTelegram size={20} color="#0088cc" />
+          </ListItemIcon>
+          <ListItemText>Telegram</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleShare('facebook')}>
+          <ListItemIcon>
+            <IconBrandFacebook size={20} color="#1877f2" />
+          </ListItemIcon>
+          <ListItemText>Facebook</ListItemText>
+        </MenuItem>
+      </Menu>
     </Paper>
   );
 };

@@ -18,6 +18,7 @@ import Logo from 'src/layouts/full/shared/logo/Logo';
 import CustomOutlinedInput from 'src/components/forms/theme-elements/CustomOutlinedInput';
 import { styled } from '@mui/material/styles';
 import { useAuth } from 'src/context/AuthContext';
+import driverIcon from 'src/assets/images/svgs/driver-icon-login-register.svg.svg';
 import {
   doc,
   updateDoc,
@@ -217,7 +218,7 @@ const Register = () => {
             {/* Solo la ilustración del conductor */}
             <Box
               component="img"
-              src="/src/assets/images/svgs/driver-icon-login-register.svg.svg"
+              src={driverIcon}
               alt="Driver illustration"
               sx={{
                 width: '100%',

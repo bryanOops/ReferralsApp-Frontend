@@ -5,6 +5,7 @@ import Spinner from './views/spinner/Spinner';
 import './utils/i18n';
 import { CustomizerContextProvider } from './context/CustomizerContext';
 import { AuthProvider } from './context/AuthContext';
+import { ReferralCodesProvider } from './context/ReferralCodesContext';
 import { BrowserRouter } from 'react-router-dom';
 
 async function deferRender() {
@@ -27,13 +28,15 @@ async function deferRender() {
 deferRender().then(() => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <AuthProvider>
-      <CustomizerContextProvider>
-        <Suspense fallback={<Spinner />}>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </Suspense>
-      </CustomizerContextProvider>
+      <ReferralCodesProvider>
+        <CustomizerContextProvider>
+          <Suspense fallback={<Spinner />}>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </Suspense>
+        </CustomizerContextProvider>
+      </ReferralCodesProvider>
     </AuthProvider>,
   );
 });
