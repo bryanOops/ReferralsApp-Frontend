@@ -1,5 +1,14 @@
 import React from 'react';
-import { Box, Avatar, Typography, Card, CardContent, Divider, Stack } from '@mui/material';
+import {
+  Box,
+  Avatar,
+  Typography,
+  Card,
+  CardContent,
+  Divider,
+  Stack,
+  useMediaQuery,
+} from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { IconArrowUpRight } from '@tabler/icons';
 
@@ -8,6 +17,8 @@ import userImg from 'src/assets/images/profile/user-1.jpg';
 import { color } from 'framer-motion';
 
 const WelcomeCard = () => {
+  const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'));
+
   return (
     <Card
       elevation={0}
@@ -69,20 +80,22 @@ const WelcomeCard = () => {
               </Stack>
             </Box>
           </Grid>
-          <Grid size={{ sm: 6 }}>
-            <Box
-              sx={{
-                width: '250px',
-                height: '200px',
-                position: 'absolute',
-                right: '70px',
-                bottom: '48px',
-                marginTop: '20px',
-              }}
-            >
-              <img src={welcomeImg} alt={welcomeImg} width={'230px'} />
-            </Box>
-          </Grid>
+          {lgUp && (
+            <Grid size={{ sm: 6 }}>
+              <Box
+                sx={{
+                  width: '250px',
+                  height: '200px',
+                  position: 'absolute',
+                  right: '70px',
+                  bottom: '48px',
+                  marginTop: '20px',
+                }}
+              >
+                <img src={welcomeImg} alt={welcomeImg} width={'230px'} />
+              </Box>
+            </Grid>
+          )}
         </Grid>
       </CardContent>
     </Card>

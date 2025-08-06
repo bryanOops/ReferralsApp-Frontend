@@ -13,7 +13,7 @@ import { CustomizerContext } from 'src/context/CustomizerContext';
 import { InputAdornment, Button, MenuItem, Stack, Alert, Snackbar } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { OutlinedInput } from '@mui/material';
-import { IconUser, IconCar, IconIdBadge2, IconPhone } from '@tabler/icons';
+import { IconUser, IconCar, IconIdBadge2, IconPhone, IconMail } from '@tabler/icons';
 import CustomSelect from '../../../components/forms/theme-elements/CustomSelect';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -46,6 +46,10 @@ const schema = yup.object().shape({
     .required('El teléfono es obligatorio')
     .matches(/^\d+$/, 'Solo números permitidos')
     .max(12, 'Máximo 12 caracteres'),
+  email: yup
+    .string()
+    .email('Debe ser un email válido')
+    .required('El correo electrónico es obligatorio'),
   userType: yup.string().required('Debe seleccionar un tipo de usuario'),
 });
 
@@ -456,8 +460,8 @@ const ReferalRegister = () => {
           nombres: data.firstName,
           apellidos: data.lastName,
           telefono: data.phone,
-          correo: '', // Campo correo vacío por decisión de jefe
-          // REMOVIDO: auth: false (ya no se incluye)
+          correo: data.email, // Campo correo del formulario
+          auth: false, // Por defecto el referido no tiene cuenta de autenticación
           createdAt: serverTimestamp(),
           metadata: metadata
             ? {
@@ -492,6 +496,7 @@ const ReferalRegister = () => {
         lastName: '',
         dni: '',
         phone: '',
+        email: '',
         userType: '',
       });
 
@@ -673,7 +678,7 @@ const ReferalRegister = () => {
                         Teléfono
                       </CustomFormLabel>
                     </Grid>
-                    <Grid size={12} mb={2}>
+                    <Grid size={12}>
                       <CustomOutlinedInput
                         startAdornment={
                           <InputAdornment position="start">
@@ -691,6 +696,31 @@ const ReferalRegister = () => {
                       {errors.phone && (
                         <Typography variant="caption" color="error">
                           {errors.phone.message}
+                        </Typography>
+                      )}
+                    </Grid>
+
+                    <Grid size={12}>
+                      <CustomFormLabel htmlFor="email" sx={{ mt: 0 }}>
+                        Correo Electrónico
+                      </CustomFormLabel>
+                    </Grid>
+                    <Grid size={12}>
+                      <CustomOutlinedInput
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <IconMail size="20" />
+                          </InputAdornment>
+                        }
+                        id="email"
+                        type="email"
+                        {...register('email')}
+                        fullWidth
+                        placeholder="ejemplo@correo.com"
+                      />
+                      {errors.email && (
+                        <Typography variant="caption" color="error">
+                          {errors.email.message}
                         </Typography>
                       )}
                     </Grid>
