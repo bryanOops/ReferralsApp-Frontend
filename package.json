@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:dev": "npm run build && copy .firebaserc.dev .firebaserc && copy firebase.dev.json firebase.json && firebase deploy --only hosting",
+    "deploy:prod": "npm run build && copy .firebaserc.prod .firebaserc && copy firebase.prod.json firebase.json && firebase deploy --only hosting",
+    "switch:dev": "copy .firebaserc.dev .firebaserc && copy firebase.dev.json firebase.json && echo '✅ Cambiado a proyecto de DESARROLLO'",
+    "switch:prod": "copy .firebaserc.prod .firebaserc && copy firebase.prod.json firebase.json && echo '🌐 Cambiado a proyecto de PRODUCCIÓN'"
   },
   "dependencies": {
     "@casl/ability": "6.3.3",

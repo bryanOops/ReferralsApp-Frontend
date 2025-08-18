@@ -8,7 +8,7 @@ import Card from '@mui/material/Card';
 import Typography from '@mui/material/Typography';
 import PageContainer from 'src/components/container/PageContainer';
 import Logo from 'src/layouts/full/shared/logo/Logo';
-import logoSonrisas from 'src/assets/images/logos/logo-sonrisas.svg';
+import logoSmartBonos from 'src/assets/images/logos/logo-smart-bonos.png';
 import { CustomizerContext } from 'src/context/CustomizerContext';
 import { InputAdornment, Button, MenuItem, Stack, Alert, Snackbar } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -32,6 +32,7 @@ import {
   query,
   where,
 } from 'firebase/firestore';
+import { IconAlertTriangle, IconCheck, IconX } from '@tabler/icons';
 
 const schema = yup.object().shape({
   driverCode: yup
@@ -40,7 +41,12 @@ const schema = yup.object().shape({
     .max(30, 'Máximo 30 caracteres'),
   firstName: yup.string().required('Los nombres son obligatorios').max(30, 'Máximo 30 caracteres'),
   lastName: yup.string().required('Los apellidos son obligatorios').max(30, 'Máximo 30 caracteres'),
-  dni: yup.string().required('El DNI es obligatorio').matches(/^\d+$/, 'Solo números permitidos'),
+  dni: yup
+    .string()
+    .required('El DNI es obligatorio')
+    .matches(/^\d+$/, 'Solo números permitidos')
+    .min(8, 'El DNI debe tener al menos 8 dígitos') // Cambiado de 5 a 8
+    .max(12, 'El DNI no puede exceder 12 dígitos'),
   phone: yup
     .string()
     .required('El teléfono es obligatorio')
@@ -98,6 +104,15 @@ const ReferalRegister = () => {
   const [driverCodeValidation, setDriverCodeValidation] = useState(null);
   const [driverCode, setDriverCode] = useState(urlDriverCode);
   const [rolesOptions, setRolesOptions] = useState([]);
+  const [dniValidation, setDniValidation] = useState(null);
+  const [dniValidationMessage, setDniValidationMessage] = useState('');
+  const [currentDni, setCurrentDni] = useState('');
+  const [dniTimeout, setDniTimeout] = useState(null);
+  const [emailValidation, setEmailValidation] = useState(null);
+  const [emailValidationMessage, setEmailValidationMessage] = useState('');
+  const [currentEmail, setCurrentEmail] = useState('');
+  const [emailTimeout, setEmailTimeout] = useState(null);
+  const [userType, setUserType] = useState(''); // Cadena vacía hasta que se carguen los roles
 
   const handleClick = () => {
     setOpen(true);
@@ -149,6 +164,12 @@ const ReferalRegister = () => {
       const rolesSnap = await getDocs(collection(db, 'roles'));
       const roles = rolesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setRolesOptions(roles);
+
+      // Encontrar el rol "Pasajero" y establecer su ID como valor por defecto
+      const pasajeroRole = roles.find((role) => role.name === 'Pasajero');
+      if (pasajeroRole) {
+        setUserType(pasajeroRole.id);
+      }
     };
 
     fetchRoles();
@@ -169,6 +190,38 @@ const ReferalRegister = () => {
 
     return () => clearTimeout(timeout); // limpia si sigue escribiendo
   }, [driverCode]);
+
+  // Limpiar timeout cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      if (dniTimeout) {
+        clearTimeout(dniTimeout);
+      }
+      if (emailTimeout) {
+        clearTimeout(emailTimeout);
+      }
+    };
+  }, [dniTimeout, emailTimeout]);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isValid },
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: 'onChange',
+    defaultValues: {
+      driverCode: urlDriverCode,
+      userType: userType, // Agregar valor por defecto
+    },
+  });
+
+  // Sincronizar el tipo de usuario con el formulario (MOVIDO DESPUÉS DE useForm)
+  useEffect(() => {
+    setValue('userType', userType);
+  }, [userType, setValue]);
 
   useEffect(() => {
     // Update the document title using the browser API
@@ -250,6 +303,82 @@ const ReferalRegister = () => {
     }
   };
 
+  // Función para validar si el DNI ya pertenece a un conductor de Taxi Sonrisas
+  const validateDriverDNI = async (dni) => {
+    if (!dni || dni.length < 8) {
+      // Cambiado de 5 a 8 dígitos
+      setDniValidation(null);
+      setDniValidationMessage('');
+      return { isDriver: false, data: null };
+    }
+
+    try {
+      const response = await fetch(
+        `https://us-central1-taxi-smiles-referral.cloudfunctions.net/validarDNIConductor/${dni}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        // El DNI pertenece a un conductor de Taxi Sonrisas
+
+        setDniValidation('driver');
+        setDniValidationMessage(
+          `Ya estás registrado como conductor en Taxi Sonrisas. No es posible afiliarte nuevamente.`,
+        );
+        return { isDriver: true, data: result.data };
+      } else {
+        // El DNI no pertenece a un conductor de Taxi Sonrisas (success: false o data: null)
+
+        setDniValidation('not_driver');
+        setDniValidationMessage(''); // Sin mensaje cuando está disponible
+        return { isDriver: false, data: null };
+      }
+    } catch (error) {
+      console.error('Error validando DNI del conductor:', error);
+      setDniValidation('error');
+      setDniValidationMessage('Error al validar el DNI. Inténtalo de nuevo.');
+      return { isDriver: false, data: null };
+    }
+  };
+
+  // Función para validar si el correo electrónico ya existe en la colección referrals
+  const validateEmailReferral = async (email) => {
+    if (!email || !email.includes('@')) {
+      setEmailValidation(null);
+      setEmailValidationMessage('');
+      return { exists: false };
+    }
+
+    try {
+      const emailQuery = query(collection(db, 'referrals'), where('correo', '==', email));
+      const emailSnapshot = await getDocs(emailQuery);
+
+      if (!emailSnapshot.empty) {
+        // El correo ya existe en la colección referrals
+        setEmailValidation('exists');
+        setEmailValidationMessage('Ya existe un referido con el correo electrónico ingresado.');
+        return { exists: true };
+      } else {
+        // El correo no existe, está disponible
+        setEmailValidation('available');
+        setEmailValidationMessage(''); // Sin mensaje cuando está disponible
+        return { exists: false };
+      }
+    } catch (error) {
+      console.error('Error validando correo electrónico:', error);
+      setEmailValidation('error');
+      setEmailValidationMessage('Error al validar el correo electrónico. Inténtalo de nuevo.');
+      return { exists: false };
+    }
+  };
+
   // Función para ejecutar reCAPTCHA v3
   const executeRecaptcha = async (action = 'submit') => {
     setIsRecaptchaLoading(true);
@@ -306,18 +435,59 @@ const ReferalRegister = () => {
     }
   };
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isValid },
-  } = useForm({
-    resolver: yupResolver(schema),
-    mode: 'onChange',
-    defaultValues: {
-      driverCode: urlDriverCode,
-    },
-  });
+  // Función para manejar cambios en el DNI
+  const handleDniChange = (e) => {
+    const dni = e.target.value;
+    setCurrentDni(dni);
+
+    // Limpiar timeout anterior si existe
+    if (dniTimeout) {
+      clearTimeout(dniTimeout);
+    }
+
+    if (dni && dni.length >= 8) {
+      // Cambiado de 5 a 8 dígitos
+
+      const timeout = setTimeout(() => {
+        validateDriverDNI(dni).catch(console.error);
+      }, 200); // Cambiado de 500ms a 200ms para igualar velocidad del código
+
+      setDniTimeout(timeout);
+    } else {
+      setDniValidation(null);
+      setDniValidationMessage('');
+    }
+  };
+
+  // Función para manejar cambios en el correo electrónico
+  const handleEmailChange = (e) => {
+    const email = e.target.value;
+    setCurrentEmail(email);
+
+    // Limpiar timeout anterior si existe
+    if (emailTimeout) {
+      clearTimeout(emailTimeout);
+    }
+
+    if (email && email.includes('@')) {
+      const timeout = setTimeout(() => {
+        validateEmailReferral(email).catch(console.error);
+      }, 200); // Mismo delay que el DNI para consistencia
+
+      setEmailTimeout(timeout);
+    } else {
+      setEmailValidation(null);
+      setEmailValidationMessage('');
+    }
+  };
+
+  // Validar si el formulario puede ser enviado
+  const canSubmit =
+    isValid &&
+    driverCodeValidation === 'valid' &&
+    dniValidation !== 'driver' &&
+    emailValidation !== 'exists' &&
+    !isLoading;
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -353,6 +523,30 @@ const ReferalRegister = () => {
     const roleId = data.userType; // "conductor" | "pasajero"
     const dni = data.dni;
 
+    // 🔍 PRE-VALIDACIÓN 0: Verificar que el DNI no pertenezca ya a un conductor de Taxi Sonrisas
+    const dniValidationResult = await validateDriverDNI(dni);
+    if (dniValidationResult.isDriver) {
+      setAlertMessage(
+        'No se puede registrar este DNI porque ya pertenece a un conductor de Taxi Sonrisas.',
+      );
+      setAlertSeverity('error');
+      setOpen(true);
+      setIsLoading(false);
+      return;
+    }
+
+    // 🔍 PRE-VALIDACIÓN 1: Verificar que el correo electrónico no exista ya en referrals
+    const emailValidationResult = await validateEmailReferral(data.email);
+    if (emailValidationResult.exists) {
+      setAlertMessage(
+        'No se puede registrar este correo electrónico porque ya existe un referido con ese correo.',
+      );
+      setAlertSeverity('error');
+      setOpen(true);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const selectedRole = rolesOptions.find((r) => r.id === roleId);
       const roleName = selectedRole?.name || 'Desconocido';
@@ -360,29 +554,20 @@ const ReferalRegister = () => {
       // 🔍 PRE-VALIDACIÓN 1: Buscar usuario existente con el mismo DNI para asociar al referralCode
       let existingUserId = null;
       if (conductorInfo?.dni) {
-        console.log('🔍 Buscando usuario existente con DNI del conductor:', conductorInfo.dni);
         const userQuery = query(collection(db, 'users'), where('dni', '==', conductorInfo.dni));
         const userSnapshot = await getDocs(userQuery);
         if (!userSnapshot.empty) {
           existingUserId = userSnapshot.docs[0].id;
-          console.log(
-            '✅ Usuario existente encontrado para asociar al referralCode:',
-            existingUserId,
-          );
         }
       }
 
       // 🔍 PRE-VALIDACIÓN 2: Buscar usuario existente con el mismo DNI del referral para asociar
       let existingReferralUserId = null;
-      console.log('🔍 Buscando usuario existente con DNI del referral:', dni);
+
       const referralUserQuery = query(collection(db, 'users'), where('dni', '==', dni));
       const referralUserSnapshot = await getDocs(referralUserQuery);
       if (!referralUserSnapshot.empty) {
         existingReferralUserId = referralUserSnapshot.docs[0].id;
-        console.log(
-          '✅ Usuario existente encontrado para asociar al referral:',
-          existingReferralUserId,
-        );
       }
 
       await runTransaction(db, async (tx) => {
@@ -410,7 +595,6 @@ const ReferalRegister = () => {
           // 🔗 NUEVO: Agregar userId si se encontró usuario existente
           if (existingUserId) {
             referralCodeData.userId = existingUserId;
-            console.log('🔗 ReferralCode asociado con userId:', existingUserId);
           }
 
           tx.set(codeRef, referralCodeData);
@@ -453,7 +637,7 @@ const ReferalRegister = () => {
         // Crear el documento base del referral
         const referralData = {
           codeId: code, // CAMBIO: registerCode → codeId (uid del referralCode)
-          type: 'referido',
+          active: false,
           role: roleId,
           dni,
           roleName: roleName,
@@ -475,7 +659,6 @@ const ReferalRegister = () => {
         // 🔗 NUEVO: Agregar campo auth si se encontró usuario existente
         if (existingReferralUserId) {
           referralData.auth = existingReferralUserId; // uid del usuario en colección users
-          console.log('🔗 Referral asociado con usuario auth:', existingReferralUserId);
         }
 
         tx.set(userRef, referralData);
@@ -497,7 +680,7 @@ const ReferalRegister = () => {
         dni: '',
         phone: '',
         email: '',
-        userType: '',
+        userType: userType, // Usar el estado local en lugar de un valor hardcodeado
       });
 
       // Resetear reCAPTCHA
@@ -540,16 +723,23 @@ const ReferalRegister = () => {
               <Box display="flex" alignItems="center" justifyContent="center">
                 <Box
                   component="img"
-                  src={logoSonrisas}
-                  alt="Logo Sonrisas"
+                  src={logoSmartBonos}
+                  alt="Logo Smart Bonos"
                   sx={{
-                    width: '300px',
+                    width: '230px',
+                    objectFit: 'contain',
                     overflow: 'hidden',
+                    height: 'auto',
                     display: 'block',
-                    mb: 2,
+                    mb: 5,
+                    mt: 3,
                   }}
                 />
               </Box>
+              <Typography variant="h4" fontWeight="700" mb={3}>
+                Registro de Referido
+              </Typography>
+
               <div>
                 <form onSubmit={handleSubmit(onSubmit)}>
                   <Grid container spacing={1}>
@@ -595,9 +785,24 @@ const ReferalRegister = () => {
                       <CustomFormLabel htmlFor="userType" sx={{ mt: 0 }}>
                         Tipo de usuario
                       </CustomFormLabel>
+                      {rolesOptions.length === 0 && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ mb: 1, display: 'block' }}
+                        >
+                          Cargando tipos de usuario...
+                        </Typography>
+                      )}
                       <CustomSelect
                         fullWidth
                         variant="outlined"
+                        value={userType}
+                        onChange={(e) => {
+                          setUserType(e.target.value);
+                          // Sincronizar con React Hook Form
+                          setValue('userType', e.target.value);
+                        }}
                         input={
                           <OutlinedInput
                             startAdornment={
@@ -607,14 +812,18 @@ const ReferalRegister = () => {
                             }
                           />
                         }
-                        {...register('userType')}
                         defaultValue=""
+                        disabled={rolesOptions.length === 0} // Deshabilitar hasta que se carguen los roles
                       >
-                        {rolesOptions.map((role) => (
-                          <MenuItem key={role.id} value={role.id}>
-                            {role.name} {/* o role.name, según cómo esté en tu colección */}
-                          </MenuItem>
-                        ))}
+                        {rolesOptions.length === 0 ? (
+                          <MenuItem value="">Cargando roles...</MenuItem>
+                        ) : (
+                          rolesOptions.map((role) => (
+                            <MenuItem key={role.id} value={role.id}>
+                              {role.name}
+                            </MenuItem>
+                          ))
+                        )}
                       </CustomSelect>
                     </Grid>
 
@@ -665,10 +874,27 @@ const ReferalRegister = () => {
                         onInput={(e) => {
                           e.target.value = e.target.value.replace(/[^0-9]/g, '');
                         }}
+                        onChange={(e) => {
+                          handleDniChange(e);
+                          // También llamar al onChange de register para mantener sincronizado
+                          const { onChange } = register('dni');
+                          onChange(e);
+                        }}
                       />
                       {errors.dni && (
                         <Typography variant="caption" color="error">
                           {errors.dni.message}
+                        </Typography>
+                      )}
+
+                      {/* Validación del DNI del conductor */}
+                      {dniValidation === 'driver' && (
+                        <Typography
+                          variant="caption"
+                          color="error"
+                          sx={{ display: 'block', mt: 1 }}
+                        >
+                          {dniValidationMessage}
                         </Typography>
                       )}
                     </Grid>
@@ -717,10 +943,27 @@ const ReferalRegister = () => {
                         {...register('email')}
                         fullWidth
                         placeholder="ejemplo@correo.com"
+                        onChange={(e) => {
+                          handleEmailChange(e);
+                          // También llamar al onChange de register para mantener sincronizado
+                          const { onChange } = register('email');
+                          onChange(e);
+                        }}
                       />
                       {errors.email && (
                         <Typography variant="caption" color="error">
                           {errors.email.message}
+                        </Typography>
+                      )}
+
+                      {/* Validación del correo electrónico */}
+                      {emailValidation === 'exists' && (
+                        <Typography
+                          variant="caption"
+                          color="error"
+                          sx={{ display: 'block', mt: 1 }}
+                        >
+                          {emailValidationMessage}
                         </Typography>
                       )}
                     </Grid>
@@ -748,7 +991,9 @@ const ReferalRegister = () => {
                         !isValid ||
                         isRecaptchaLoading ||
                         !isRecaptchaReady ||
-                        driverCodeValidation !== 'valid'
+                        driverCodeValidation !== 'valid' ||
+                        dniValidation === 'driver' ||
+                        emailValidation === 'exists'
                       }
                       startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
                     >
