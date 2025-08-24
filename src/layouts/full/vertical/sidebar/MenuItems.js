@@ -133,6 +133,14 @@ const panelItems = [
     chip: '',
     chipColor: 'secondary',
   },
+  {
+    id: uniqueId(),
+    title: 'Panel Admin',
+    icon: IconSettings,
+    href: '/admin-panel',
+    chip: 'Admin',
+    chipColor: 'warning',
+  },
 ];
 
 // Todas las opciones (Panel + Apps + demás secciones)

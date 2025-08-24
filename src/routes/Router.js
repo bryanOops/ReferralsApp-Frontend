@@ -200,6 +200,14 @@ const ReferalRegister = Loadable(
   lazy(() => import('../views/pages/referal-register/ReferalRegister')),
 );
 
+//Completar datos de referido
+const CompletarDatos = Loadable(
+  lazy(() => import('../views/pages/completar-datos/CompletarDatos')),
+);
+
+//Panel de administrador
+const AdminPanel = Loadable(lazy(() => import('../views/apps/admin-panel/AdminPanel')));
+
 const Router = [
   {
     path: '/',
@@ -266,6 +274,15 @@ const Router = [
         element: (
           <ProtectedRoute>
             <PointsAndExchanges />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin-panel',
+        exact: true,
+        element: (
+          <ProtectedRoute>
+            <AdminPanel />
           </ProtectedRoute>
         ),
       },
@@ -549,6 +566,7 @@ const Router = [
       { path: '/frontend-pages/blog/detail/:id', element: <BlogPost /> },
       { path: '*', element: <Navigate to="/auth/404" /> },
       { path: '/register-referral', element: <ReferalRegister /> },
+      { path: '/complete-data', element: <CompletarDatos /> },
     ],
   },
 ];

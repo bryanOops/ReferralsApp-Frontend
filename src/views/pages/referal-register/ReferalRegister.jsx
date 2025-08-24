@@ -33,6 +33,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { IconAlertTriangle, IconCheck, IconX } from '@tabler/icons';
+import { sendWelcomeEmail } from '../../../utils/emailService';
 
 const schema = yup.object().shape({
   driverCode: yup
@@ -570,6 +571,8 @@ const ReferalRegister = () => {
         existingReferralUserId = referralUserSnapshot.docs[0].id;
       }
 
+      let referralId = null; // Variable para almacenar el ID del referral
+
       await runTransaction(db, async (tx) => {
         /** 1️⃣  Verificar / crear referralCodes */
         const codeRef = doc(db, 'referralCodes', code);
@@ -633,6 +636,7 @@ const ReferalRegister = () => {
 
         /** 5️⃣  Registrar usuario referido */
         const userRef = doc(collection(db, 'referrals')); // auto-id
+        referralId = userRef.id; // Guardar el ID para usar después de la transacción
 
         // Crear el documento base del referral
         const referralData = {
@@ -670,7 +674,29 @@ const ReferalRegister = () => {
         });
       });
 
-      setAlertMessage('Referido registrado correctamente');
+      // Enviar email de bienvenida automáticamente
+      try {
+        const referralDataForEmail = {
+          id: referralId, // ID del referral recién creado
+          nombres: data.firstName,
+          apellidos: data.lastName,
+          dni: data.dni,
+          correo: data.email,
+          telefono: data.phone,
+        };
+
+        const emailResult = await sendWelcomeEmail(referralDataForEmail);
+        if (emailResult.success) {
+          console.log('Email de bienvenida enviado:', emailResult.completionUrl);
+        } else {
+          console.error('Error enviando email:', emailResult.error);
+        }
+      } catch (emailError) {
+        console.error('Error en envío de email:', emailError);
+        // No bloqueamos el flujo principal si falla el email
+      }
+
+      setAlertMessage('Referido registrado correctamente.');
       setAlertSeverity('success');
 
       reset({
