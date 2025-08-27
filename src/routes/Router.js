@@ -566,6 +566,7 @@ const Router = [
       { path: '/frontend-pages/blog/detail/:id', element: <BlogPost /> },
       { path: '*', element: <Navigate to="/auth/404" /> },
       { path: '/register-referral', element: <ReferalRegister /> },
+
       { path: '/complete-data', element: <CompletarDatos /> },
     ],
   },
