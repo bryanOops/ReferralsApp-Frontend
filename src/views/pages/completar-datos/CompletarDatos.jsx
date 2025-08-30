@@ -18,8 +18,18 @@ import {
   Select,
   MenuItem,
   FormControl,
+  Grid,
+  Chip,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+import { Visibility, VisibilityOff, CloudUpload, CheckCircle } from '@mui/icons-material';
+
+// Configurar dayjs en español
+dayjs.locale('es');
 import driver1 from '../../../assets/images/referralRegister/driver1.png';
 import driver2 from '../../../assets/images/referralRegister/driver2.png';
 import logoSmartBonos from '../../../assets/images/logos/logo-smart-bonos.png';
@@ -59,9 +69,9 @@ const countryCodes = [
 const sendVerificationCode = async (userData) => {
   try {
     const payload = {
-      phone: userData.celular,
+      phone: userData.phone,
       userData: {
-        phone: userData.celular,
+        phone: userData.phone,
         password: userData.password,
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -70,7 +80,7 @@ const sendVerificationCode = async (userData) => {
     };
 
     console.log('Enviando al backend:', payload);
-    console.log('Número de teléfono enviado:', userData.celular);
+    console.log('Número de teléfono enviado:', userData.phone);
 
     const response = await fetch(`${API_BASE_URL}/api/auth/send-verification-code`, {
       method: 'POST',
@@ -94,6 +104,84 @@ const sendVerificationCode = async (userData) => {
   }
 };
 
+// Función para completar el registro completo
+const completeRegistration = async (formData, files, tokenData, interviewData, token) => {
+  try {
+    const formDataToSend = new FormData();
+
+    // 1. userInvitation (JSON string)
+    formDataToSend.append(
+      'userInvitation',
+      JSON.stringify({
+        nombres: tokenData.nombres,
+        apellidos: tokenData.apellidos,
+        email: tokenData.email,
+        invitationToken: token,
+      }),
+    );
+
+    // 2. registration (JSON string)
+    formDataToSend.append(
+      'registration',
+      JSON.stringify({
+        phone: formData.phone,
+        password: formData.password,
+        acceptTerms: formData.acceptTerms,
+      }),
+    );
+
+    // 3. interview (JSON string)
+    formDataToSend.append(
+      'interview',
+      JSON.stringify({
+        interviewDate: interviewData.interviewDate,
+        interviewTime: interviewData.interviewTime,
+        interviewLocation: interviewData.interviewLocation,
+      }),
+    );
+
+    // 4. Archivos (obligatorios según frontend)
+    formDataToSend.append('dni', files.dni);
+    formDataToSend.append('soat', files.soat);
+    formDataToSend.append('brevete', files.brevete);
+    formDataToSend.append('tarjetaPropiedad1', files.tarjetaPropiedad1);
+    formDataToSend.append('tarjetaPropiedad2', files.tarjetaPropiedad2);
+    formDataToSend.append('antecedentes', files.antecedentes);
+    formDataToSend.append('fotosVehiculo', files.fotosVehiculo);
+
+    console.log('🚀 Enviando registro completo al backend...');
+    console.log('📁 Archivos a enviar:', files);
+    console.log('📅 Datos de entrevista:', interviewData);
+    console.log(
+      '📄 Tipo de archivo DNI:',
+      typeof files.dni,
+      files.dni instanceof File ? 'File' : 'No es File',
+    );
+    console.log(
+      '📄 Tipo de archivo Brevete:',
+      typeof files.brevete,
+      files.brevete instanceof File ? 'File' : 'No es File',
+    );
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/complete-registration`, {
+      method: 'POST',
+      body: formDataToSend, // No headers para FormData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error del servidor: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Respuesta del backend:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error completando registro:', error);
+    return { success: false, message: 'Error completando el registro' };
+  }
+};
+
 const verifyCode = async (phone, code) => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/verify-code`, {
@@ -110,10 +198,10 @@ const verifyCode = async (phone, code) => {
   }
 };
 
-// Schema de validación
+// Schema de validación para paso 1
 const schema = yup.object().shape({
-  codigoPais: yup.string().required('Código de país requerido'),
-  celular: yup
+  countryCode: yup.string().required('Código de país requerido'),
+  phone: yup
     .string()
     .required('El celular es requerido')
     .matches(/^\d+$/, 'Solo números permitidos')
@@ -127,6 +215,30 @@ const schema = yup.object().shape({
     .required('Repite tu contraseña')
     .oneOf([yup.ref('password'), null], 'Las contraseñas no coinciden'),
   acceptTerms: yup.boolean().oneOf([true], 'Debes aceptar los términos y condiciones'),
+});
+
+// Schema de validación para paso 3
+const step3Schema = yup.object().shape({
+  dni: yup.string().required('DNI es requerido').min(8, 'DNI debe tener al menos 8 caracteres'),
+  brevete: yup.string().required('Brevete/licencia es requerido'),
+  soat: yup.string().required('SOAT es requerido'),
+  tarjetaPropiedad1: yup.string().required('Tarjeta de propiedad es requerida'),
+  tarjetaPropiedad2: yup.string().required('Tarjeta de propiedad es requerida'),
+  antecedentes: yup.string().required('Antecedentes penales son requeridos'),
+  fotosVehiculo: yup.string().required('Fotos del vehículo son requeridas'),
+});
+
+// Schema de validación para paso 4
+const step4Schema = yup.object().shape({
+  interviewDate: yup
+    .date()
+    .required('Fecha de entrevista es requerida')
+    .min(new Date(), 'La fecha debe ser futura'),
+  interviewTime: yup.string().required('Hora de entrevista es requerida'),
+  interviewLocation: yup
+    .string()
+    .required('Lugar de entrevista es requerido')
+    .min(5, 'Mínimo 5 caracteres'),
 });
 
 // Componente Header
@@ -245,7 +357,7 @@ const VerificationStep = ({ userData, onVerificationSuccess, onBack }) => {
     setIsLoading(false);
 
     // Mostrar mensaje informativo
-    setSuccessMessage(`Código enviado a ${userData.celular}`);
+    setSuccessMessage(`Código enviado a ${userData.phone}`);
   }, [userData]);
 
   const handleInputChange = (index, value) => {
@@ -280,7 +392,7 @@ const VerificationStep = ({ userData, onVerificationSuccess, onBack }) => {
     }
 
     setIsLoading(true);
-    const result = await verifyCode(userData.celular, codeToVerify);
+    const result = await verifyCode(userData.phone, codeToVerify);
 
     if (result.success) {
       onVerificationSuccess();
@@ -307,7 +419,7 @@ const VerificationStep = ({ userData, onVerificationSuccess, onBack }) => {
         setCanResend(false);
         setCode(['', '', '', '', '', '']);
         setError('');
-        setSuccessMessage(`Código reenviado a ${userData.celular}`);
+        setSuccessMessage(`Código reenviado a ${userData.phone}`);
         inputRefs.current[0]?.focus();
       } else {
         const newRetryCount = retryCount + 1;
@@ -611,6 +723,762 @@ const AlternatingImage = () => {
   );
 };
 
+// Hook personalizado para manejar archivos
+const useFileUpload = (setFormValue) => {
+  const [files, setFiles] = useState({});
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [isUploading, setIsUploading] = useState({});
+
+  const simulateUpload = (fieldName, selectedFiles) => {
+    // Iniciar la subida
+    setIsUploading((prev) => ({ ...prev, [fieldName]: true }));
+    setUploadProgress((prev) => ({ ...prev, [fieldName]: 0 }));
+
+    // Simular progreso de subida
+    const interval = setInterval(() => {
+      setUploadProgress((prev) => {
+        const currentProgress = prev[fieldName] || 0;
+        const newProgress = currentProgress + Math.random() * 30;
+
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          // Completar la subida
+          setFiles((prevFiles) => ({
+            ...prevFiles,
+            [fieldName]: selectedFiles,
+          }));
+          setIsUploading((prevUploading) => ({ ...prevUploading, [fieldName]: false }));
+
+          // Actualizar el valor del formulario para que la validación funcione
+          const fileName = Array.isArray(selectedFiles)
+            ? selectedFiles.length === 1
+              ? selectedFiles[0].name
+              : `${selectedFiles.length} archivos seleccionados`
+            : selectedFiles.name;
+          setFormValue(fieldName, fileName, { shouldValidate: true });
+
+          return { ...prev, [fieldName]: 100 };
+        }
+
+        return { ...prev, [fieldName]: newProgress };
+      });
+    }, 200);
+  };
+
+  const openFileDialog = (fieldName, accept = '*/*', multiple = false) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.multiple = multiple;
+
+    input.onchange = (e) => {
+      const selectedFiles = Array.from(e.target.files);
+      if (selectedFiles.length > 0) {
+        simulateUpload(fieldName, multiple ? selectedFiles : selectedFiles[0]);
+      }
+    };
+
+    input.click();
+  };
+
+  const getFileDisplayName = (fieldName) => {
+    const file = files[fieldName];
+    if (!file) return '';
+
+    if (Array.isArray(file)) {
+      return file.length === 1 ? file[0].name : `${file.length} archivos seleccionados`;
+    }
+
+    return file.name;
+  };
+
+  const hasFile = (fieldName) => {
+    const file = files[fieldName];
+    return file && (Array.isArray(file) ? file.length > 0 : true);
+  };
+
+  return {
+    files,
+    openFileDialog,
+    getFileDisplayName,
+    hasFile,
+    uploadProgress,
+    isUploading,
+  };
+};
+
+// Componente Step 3 - Datos del Conductor
+const Step3Component = ({
+  onSubmit,
+  onBack,
+  register,
+  errors,
+  isFormValid,
+  isLoading,
+  watchedFields,
+  setValueStep3,
+  onFilesReady,
+}) => {
+  const { files, openFileDialog, getFileDisplayName, hasFile, uploadProgress, isUploading } =
+    useFileUpload(setValueStep3);
+
+  // Pasar los archivos reales al componente padre cuando estén listos
+  React.useEffect(() => {
+    if (onFilesReady && Object.keys(files).length > 0) {
+      onFilesReady(files);
+    }
+  }, [files, onFilesReady]);
+
+  // Función para verificar si todos los archivos están cargados
+  const areAllFilesUploaded = () => {
+    const requiredFields = [
+      'dni',
+      'brevete',
+      'soat',
+      'tarjetaPropiedad1',
+      'tarjetaPropiedad2',
+      'antecedentes',
+      'fotosVehiculo',
+    ];
+    return requiredFields.every((field) => hasFile(field));
+  };
+
+  // Función para obtener el icono correcto
+  const getFieldIcon = (fieldName) => {
+    if (isUploading[fieldName]) {
+      return <CloudUpload sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 20 }} />;
+    }
+    if (hasFile(fieldName)) {
+      return <CheckCircle sx={{ color: '#4CAF50', fontSize: 20 }} />;
+    }
+    return <CloudUpload sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 20 }} />;
+  };
+
+  // Función helper para crear campos de upload
+  const createUploadField = (fieldName, placeholder, accept = 'image/*,.pdf', multiple = false) => (
+    <Box sx={{ position: 'relative' }}>
+      <TextField
+        fullWidth
+        variant="outlined"
+        {...register(fieldName)}
+        error={!!errors[fieldName]}
+        helperText={errors[fieldName]?.message}
+        placeholder={placeholder}
+        value={getFileDisplayName(fieldName)}
+        onClick={() => !isUploading[fieldName] && openFileDialog(fieldName, accept, multiple)}
+        InputProps={{
+          readOnly: true,
+          startAdornment: (
+            <InputAdornment position="start">{getFieldIcon(fieldName)}</InputAdornment>
+          ),
+        }}
+        sx={{
+          cursor: isUploading[fieldName] ? 'default' : 'pointer',
+          '& .MuiOutlinedInput-root': {
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '8px',
+            height: { xs: '52px', md: '48px' },
+            cursor: isUploading[fieldName] ? 'default' : 'pointer',
+            overflow: 'hidden',
+            position: 'relative',
+            '& fieldset': { borderColor: 'transparent' },
+            '&:hover fieldset': {
+              borderColor: isUploading[fieldName] ? 'transparent' : 'rgba(255, 255, 255, 0.3)',
+            },
+            '&.Mui-focused fieldset': { borderColor: '#90B0FF', borderWidth: '2px' },
+            transition: 'all 0.3s ease',
+            '&::before': isUploading[fieldName]
+              ? {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  height: '100%',
+                  width: `${uploadProgress[fieldName] || 0}%`,
+                  backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                  zIndex: 1,
+                  transition: 'width 0.3s ease',
+                }
+              : {},
+          },
+          '& .MuiInputBase-input': {
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 500,
+            padding: { xs: '16px 15px', md: '14px 15px' },
+            cursor: isUploading[fieldName] ? 'default' : 'pointer',
+            position: 'relative',
+            zIndex: 2,
+            '&::placeholder': {
+              color: 'rgba(255, 255, 255, 0.8)',
+              opacity: 1,
+              fontSize: '14px',
+            },
+          },
+          '& .MuiInputAdornment-root': {
+            position: 'relative',
+            zIndex: 2,
+          },
+          '& .MuiFormHelperText-root': {
+            color: '#FA896B',
+            fontSize: { xs: '11px', md: '12px' },
+            marginLeft: '8px',
+            marginTop: '6px',
+          },
+        }}
+      />
+    </Box>
+  );
+
+  return (
+    <Box
+      component="form"
+      onSubmit={onSubmit}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0,
+        p: { xs: 3, sm: 3, md: 5 },
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Título principal */}
+      <Typography
+        variant="h4"
+        sx={{
+          color: 'white',
+          fontSize: { xs: '24px', sm: '28px', md: '35px' },
+          fontWeight: 800,
+          textAlign: { xs: 'center', md: 'left' },
+          mb: { xs: 2, md: 3 },
+          lineHeight: 1.2,
+          letterSpacing: '-0.02em',
+          px: { xs: 1, md: 0 },
+        }}
+      >
+        Regístrate y genera ingresos conduciendo
+      </Typography>
+
+      {/* Subtítulo */}
+      <Typography
+        variant="body1"
+        sx={{
+          color: 'rgba(255, 255, 255, 0.9)',
+          fontSize: { xs: '14px', md: '16px' },
+          textAlign: { xs: 'center', md: 'left' },
+          mb: { xs: 3, md: 4 },
+          fontWeight: 500,
+          lineHeight: 1.4,
+          px: { xs: 1, md: 0 },
+        }}
+      >
+        Completa los campos y regístrate
+      </Typography>
+
+      {/* Grid de campos - 2 columnas en desktop, 1 en móvil */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+          gap: { xs: 2.5, md: 2 },
+          mb: 3,
+        }}
+      >
+        {/* DNI (Frontal/Vertical) */}
+        {createUploadField('dni', 'DNI (Frontal/Vertical)')}
+
+        {/* Brevete/licencia */}
+        {createUploadField('brevete', 'Brevete/licencia')}
+
+        {/* SOAT */}
+        {createUploadField('soat', 'SOAT')}
+
+        {/* Tarjeta de propiedad 1 */}
+        {createUploadField('tarjetaPropiedad1', 'Tarjeta de propiedad')}
+
+        {/* Antecedentes penales */}
+        {createUploadField('antecedentes', 'Antecedentes penales')}
+
+        {/* Tarjeta de propiedad 2 */}
+        {createUploadField('tarjetaPropiedad2', 'Tarjeta de propiedad')}
+      </Box>
+
+      {/* Campo Fotos del vehículo - Ancho completo */}
+      <Box sx={{ mb: 3 }}>
+        {createUploadField(
+          'fotosVehiculo',
+          'Fotos del vehículo (frontal, posterior, lateral, interior)',
+          'image/*',
+          true,
+        )}
+      </Box>
+
+      {/* Botones */}
+      <Box
+        sx={{
+          display: 'flex',
+          gap: { xs: 1, md: 2 },
+          alignItems: 'center',
+          justifyContent: { xs: 'center', md: 'flex-start' },
+          flexDirection: { xs: 'column', sm: 'row' },
+          px: { xs: 1, md: 0 },
+        }}
+      >
+        {/* Botón Siguiente */}
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={!areAllFilesUploaded() || isLoading}
+          sx={{
+            backgroundColor: 'white',
+            color: '#5D87FF',
+            py: { xs: 2, md: 1.5 },
+            px: { xs: 6, md: 4 },
+            fontSize: { xs: '15px', md: '16px' },
+            fontWeight: 700,
+            borderRadius: '16px',
+            textTransform: 'none',
+            height: { xs: '48px', md: '40px' },
+            width: { xs: '100%', sm: '48%', md: '30%' },
+            minWidth: { xs: 'auto', md: '120px' },
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              boxShadow: '0 6px 24px rgba(0, 0, 0, 0.16)',
+              transform: 'translateY(-1px)',
+            },
+            '&:disabled': {
+              backgroundColor: 'rgba(255, 255, 255, 0.4)',
+              color: 'rgba(93, 135, 255, 0.5)',
+              boxShadow: 'none',
+              transform: 'none',
+            },
+          }}
+          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+        >
+          {isLoading ? 'Guardando...' : 'Siguiente'}
+        </Button>
+
+        {/* Botón Atrás */}
+        <Button
+          variant="contained"
+          onClick={onBack}
+          sx={{
+            backgroundColor: '#4A79FF',
+            color: 'white',
+            py: { xs: 2, md: 1.5 },
+            px: { xs: 6, md: 4 },
+            fontSize: { xs: '15px', md: '16px' },
+            fontWeight: 700,
+            borderRadius: '16px',
+            textTransform: 'none',
+            height: { xs: '48px', md: '40px' },
+            width: { xs: '100%', sm: '48%', md: '30%' },
+            minWidth: { xs: 'auto', md: '120px' },
+            border: 'none',
+            boxShadow: '0 4px 16px rgba(74, 121, 255, 0.3)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              backgroundColor: '#3A69FF',
+              boxShadow: '0 6px 24px rgba(74, 121, 255, 0.4)',
+              transform: 'translateY(-1px)',
+            },
+          }}
+        >
+          Atrás
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+// Componente Step 4 - Entrevista y Revisión del Vehículo
+const Step4Component = ({
+  onSubmit,
+  onBack,
+  register,
+  errors,
+  isFormValid,
+  isLoading,
+  watchedFields,
+  setValue,
+  tokenData,
+}) => {
+  // Generar horas disponibles (8 AM a 6 PM)
+  const horasDisponibles = [];
+  for (let i = 8; i <= 18; i++) {
+    const hora12 = i > 12 ? i - 12 : i;
+    const ampm = i >= 12 ? 'PM' : 'AM';
+    const horaDisplay = `${hora12 === 0 ? 12 : hora12}:00 ${ampm}`;
+    const horaValue = `${i.toString().padStart(2, '0')}:00`;
+    horasDisponibles.push({ value: horaValue, label: horaDisplay });
+  }
+
+  const handleSubmit = async (data) => {
+    // Solo llamar onSubmit para que se maneje en el componente padre
+    onSubmit(data);
+  };
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0,
+          p: { xs: 3, sm: 3, md: 5 },
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Título principal */}
+        <Typography
+          variant="h4"
+          sx={{
+            color: 'white',
+            fontSize: { xs: '24px', sm: '28px', md: '35px' },
+            fontWeight: 800,
+            textAlign: { xs: 'center', md: 'left' },
+            mb: { xs: 2, md: 3 },
+            lineHeight: 1.2,
+            letterSpacing: '-0.02em',
+            px: { xs: 1, md: 0 },
+          }}
+        >
+          Entrevista y Revisión del Vehículo
+        </Typography>
+
+        {/* Subtítulo */}
+        <Typography
+          variant="body1"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontSize: { xs: '14px', md: '16px' },
+            textAlign: { xs: 'center', md: 'left' },
+            mb: { xs: 3, md: 4 },
+            fontWeight: 500,
+            lineHeight: 1.4,
+            px: { xs: 1, md: 0 },
+          }}
+        >
+          Completa los campos y regístrate
+        </Typography>
+
+        {/* Grid de campos */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            gap: { xs: 2.5, md: 2 },
+            mb: 3,
+          }}
+        >
+          {/* Campo Fecha de entrevista */}
+          <Box>
+            <DatePicker
+              value={watchedFields[0] ? dayjs(watchedFields[0]) : null}
+              onChange={(newValue) => {
+                setValue('interviewDate', newValue ? newValue.toDate() : null, {
+                  shouldValidate: true,
+                });
+              }}
+              minDate={dayjs().add(1, 'day')} // Mínimo mañana
+              maxDate={dayjs().add(30, 'day')} // Máximo 30 días
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  placeholder: 'Fecha de entrevista',
+                  error: !!errors.interviewDate,
+                  helperText: errors.interviewDate?.message,
+                  sx: {
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      borderRadius: '8px',
+                      height: { xs: '52px', md: '48px' },
+                      '& fieldset': { borderColor: 'transparent' },
+                      '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
+                      '&.Mui-focused fieldset': { borderColor: '#90B0FF', borderWidth: '2px' },
+                      transition: 'all 0.3s ease',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      padding: { xs: '16px 15px', md: '14px 15px' },
+                      '&::placeholder': {
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        opacity: 1,
+                        fontSize: '14px',
+                      },
+                    },
+                    '& .MuiInputAdornment-root .MuiSvgIcon-root': {
+                      color: 'rgba(255, 255, 255, 0.8)',
+                    },
+                    '& .MuiInputAdornment-root .MuiIconButton-root': {
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                        color: 'rgba(255, 255, 255, 1)',
+                      },
+                    },
+                    '& .MuiFormHelperText-root': {
+                      color: '#FA896B',
+                      fontSize: { xs: '11px', md: '12px' },
+                      marginLeft: '8px',
+                      marginTop: '6px',
+                    },
+                  },
+                },
+              }}
+            />
+          </Box>
+
+          {/* Campo Hora de entrevista */}
+          <Box>
+            <FormControl
+              fullWidth
+              error={!!errors.interviewTime}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: '8px',
+                  height: { xs: '52px', md: '48px' },
+                  '& fieldset': { borderColor: 'transparent' },
+                  '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
+                  '&.Mui-focused fieldset': { borderColor: '#90B0FF', borderWidth: '2px' },
+                  transition: 'all 0.3s ease',
+                },
+                '& .MuiSelect-select': {
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  padding: { xs: '16px 15px', md: '14px 15px' },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '14px',
+                  '&.Mui-focused': { color: '#90B0FF' },
+                },
+                '& .MuiSelect-icon': {
+                  color: 'rgba(255, 255, 255, 0.8)',
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#FA896B',
+                  fontSize: { xs: '11px', md: '12px' },
+                  marginLeft: '8px',
+                  marginTop: '6px',
+                },
+              }}
+            >
+              <Select
+                {...register('interviewTime')}
+                value={watchedFields[1] || ''}
+                displayEmpty
+                renderValue={(selected) => {
+                  if (!selected) {
+                    return (
+                      <em style={{ color: 'rgba(255, 255, 255, 0.8)', fontStyle: 'normal' }}>
+                        Hora de entrevista
+                      </em>
+                    );
+                  }
+                  const hora = horasDisponibles.find((h) => h.value === selected);
+                  return hora ? hora.label : selected;
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                      mt: 1,
+                      maxHeight: '300px',
+                      '& .MuiMenuItem-root': {
+                        color: '#5D87FF',
+                        fontWeight: 500,
+                        py: 1,
+                        '&:hover': {
+                          backgroundColor: 'rgba(93, 135, 255, 0.1)',
+                        },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(93, 135, 255, 0.2)',
+                          color: '#5D87FF',
+                          fontWeight: 600,
+                          '&:hover': {
+                            backgroundColor: 'rgba(93, 135, 255, 0.3)',
+                          },
+                        },
+                      },
+                    },
+                  },
+                }}
+              >
+                {horasDisponibles.map((hora) => (
+                  <MenuItem key={hora.value} value={hora.value}>
+                    {hora.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.interviewTime && (
+                <Typography
+                  sx={{
+                    color: '#FA896B',
+                    fontSize: { xs: '11px', md: '12px' },
+                    marginLeft: '8px',
+                    marginTop: '6px',
+                  }}
+                >
+                  {errors.interviewTime.message}
+                </Typography>
+              )}
+            </FormControl>
+          </Box>
+        </Box>
+
+        {/* Campo Lugar de entrevista - Ancho completo */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            {...register('interviewLocation')}
+            error={!!errors.interviewLocation}
+            helperText={errors.interviewLocation?.message}
+            placeholder="Lugar de entrevista"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                height: { xs: '52px', md: '48px' },
+                '& fieldset': { borderColor: 'transparent' },
+                '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
+                '&.Mui-focused fieldset': { borderColor: '#90B0FF', borderWidth: '2px' },
+                transition: 'all 0.3s ease',
+              },
+              '& .MuiInputBase-input': {
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: 500,
+                padding: { xs: '16px 15px', md: '14px 15px' },
+                '&::placeholder': {
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  opacity: 1,
+                  fontSize: '14px',
+                },
+              },
+              '& .MuiFormHelperText-root': {
+                color: '#FA896B',
+                fontSize: { xs: '11px', md: '12px' },
+                marginLeft: '8px',
+                marginTop: '6px',
+              },
+            }}
+          />
+        </Box>
+
+        {/* Texto descriptivo */}
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontSize: { xs: '12px', md: '14px' },
+            textAlign: { xs: 'center', md: 'left' },
+            mb: { xs: 3, md: 4 },
+            fontWeight: 400,
+            lineHeight: 1.4,
+            px: { xs: 1, md: 0 },
+          }}
+        >
+          En esta etapa se realizará una entrevista personal al conductor y la revisión del
+          vehículo, donde se evaluará su estado general, documentación y condiciones de seguridad
+        </Typography>
+
+        {/* Botones */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: { xs: 1, md: 2 },
+            alignItems: 'center',
+            justifyContent: { xs: 'center', md: 'flex-start' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            px: { xs: 1, md: 0 },
+          }}
+        >
+          {/* Botón Finalizar */}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={!isFormValid() || isLoading}
+            sx={{
+              backgroundColor: 'white',
+              color: '#5D87FF',
+              py: { xs: 2, md: 1.5 },
+              px: { xs: 6, md: 4 },
+              fontSize: { xs: '15px', md: '16px' },
+              fontWeight: 700,
+              borderRadius: '16px',
+              textTransform: 'none',
+              height: { xs: '48px', md: '40px' },
+              width: { xs: '100%', sm: '48%', md: '30%' },
+              minWidth: { xs: 'auto', md: '120px' },
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.16)',
+                transform: 'translateY(-1px)',
+              },
+              '&:disabled': {
+                backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                color: 'rgba(93, 135, 255, 0.5)',
+                boxShadow: 'none',
+                transform: 'none',
+              },
+            }}
+            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {isLoading ? 'Finalizando...' : 'Finalizar'}
+          </Button>
+
+          {/* Botón Atrás */}
+          <Button
+            variant="contained"
+            onClick={onBack}
+            sx={{
+              backgroundColor: '#4A79FF',
+              color: 'white',
+              py: { xs: 2, md: 1.5 },
+              px: { xs: 6, md: 4 },
+              fontSize: { xs: '15px', md: '16px' },
+              fontWeight: 700,
+              borderRadius: '16px',
+              textTransform: 'none',
+              height: { xs: '48px', md: '40px' },
+              width: { xs: '100%', sm: '48%', md: '30%' },
+              minWidth: { xs: 'auto', md: '120px' },
+              border: 'none',
+              boxShadow: '0 4px 16px rgba(74, 121, 255, 0.3)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                backgroundColor: '#3A69FF',
+                boxShadow: '0 6px 24px rgba(74, 121, 255, 0.4)',
+                transform: 'translateY(-1px)',
+              },
+            }}
+          >
+            Atrás
+          </Button>
+        </Box>
+      </Box>
+    </LocalizationProvider>
+  );
+};
+
 // Componente Formulario
 const FormSection = ({
   tokenData,
@@ -709,9 +1577,9 @@ const FormSection = ({
             }}
           >
             <Select
-              {...register('codigoPais')}
+              {...register('countryCode')}
               defaultValue="+593"
-              error={!!errors.codigoPais}
+              error={!!errors.countryCode}
               renderValue={(value) => {
                 const selectedCountry = countryCodes.find((country) => country.code === value);
                 return selectedCountry ? (
@@ -783,8 +1651,8 @@ const FormSection = ({
           <TextField
             fullWidth
             variant="outlined"
-            {...register('celular')}
-            error={!!errors.celular}
+            {...register('phone')}
+            error={!!errors.phone}
             placeholder="Número de celular"
             inputProps={{ maxLength: 12 }}
             onInput={(e) => {
@@ -828,7 +1696,7 @@ const FormSection = ({
         </Box>
 
         {/* Error messages */}
-        {(errors.codigoPais || errors.celular) && (
+        {(errors.countryCode || errors.phone) && (
           <Typography
             sx={{
               color: '#FA896B',
@@ -837,7 +1705,7 @@ const FormSection = ({
               marginTop: '6px',
             }}
           >
-            {errors.codigoPais?.message || errors.celular?.message}
+            {errors.countryCode?.message || errors.phone?.message}
           </Typography>
         )}
       </Box>
@@ -1083,7 +1951,12 @@ const CompletarDatos = () => {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [step1Data, setStep1Data] = useState(null);
+  const [step2Data, setStep2Data] = useState(null);
   const [formData, setFormData] = useState(null);
+  const [step3FormData, setStep3FormData] = useState(null);
+  const [step4FormData, setStep4FormData] = useState(null);
+  const [registrationCompleted, setRegistrationCompleted] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState({});
 
   const params = new URLSearchParams(location.search);
   const token = params.get('token');
@@ -1099,21 +1972,73 @@ const CompletarDatos = () => {
     resolver: yupResolver(schema),
     mode: 'onChange',
     defaultValues: {
-      codigoPais: '+593',
-      celular: '',
+      countryCode: '+593',
+      phone: '',
       password: '',
       repeatPassword: '',
       acceptTerms: false,
     },
   });
 
+  // Hook de formulario para paso 3
+  const {
+    register: registerStep3,
+    handleSubmit: handleSubmitStep3,
+    formState: { errors: errorsStep3 },
+    watch: watchStep3,
+    setValue: setValueStep3,
+    reset: resetStep3,
+  } = useForm({
+    resolver: yupResolver(step3Schema),
+    mode: 'onChange',
+    defaultValues: {
+      dni: '',
+      brevete: '',
+      soat: '',
+      tarjetaPropiedad1: '',
+      tarjetaPropiedad2: '',
+      antecedentes: '',
+      fotosVehiculo: '',
+    },
+  });
+
+  // Hook de formulario para paso 4
+  const {
+    register: registerStep4,
+    handleSubmit: handleSubmitStep4,
+    formState: { errors: errorsStep4 },
+    watch: watchStep4,
+    setValue: setValueStep4,
+    reset: resetStep4,
+  } = useForm({
+    resolver: yupResolver(step4Schema),
+    mode: 'onChange',
+    defaultValues: {
+      interviewDate: null,
+      interviewTime: '',
+      interviewLocation: '',
+    },
+  });
+
   const watchedFields = watch([
-    'codigoPais',
-    'celular',
+    'countryCode',
+    'phone',
     'password',
     'repeatPassword',
     'acceptTerms',
   ]);
+
+  const watchedStep3Fields = watchStep3([
+    'dni',
+    'brevete',
+    'soat',
+    'tarjetaPropiedad1',
+    'tarjetaPropiedad2',
+    'antecedentes',
+    'fotosVehiculo',
+  ]);
+
+  const watchedStep4Fields = watchStep4(['interviewDate', 'interviewTime', 'interviewLocation']);
 
   const isFormValid = () => {
     return (
@@ -1123,6 +2048,29 @@ const CompletarDatos = () => {
       watchedFields[3]?.trim() !== '' &&
       watchedFields[2] === watchedFields[3] &&
       watchedFields[4] === true
+    );
+  };
+
+  const isStep3FormValid = () => {
+    return (
+      watchedStep3Fields[0]?.trim() !== '' &&
+      watchedStep3Fields[1]?.trim() !== '' &&
+      watchedStep3Fields[2]?.trim() !== '' &&
+      watchedStep3Fields[3]?.trim() !== '' &&
+      watchedStep3Fields[4]?.trim() !== '' &&
+      watchedStep3Fields[5]?.trim() !== '' &&
+      watchedStep3Fields[6]?.trim() !== ''
+    );
+  };
+
+  const isStep4FormValid = () => {
+    return (
+      watchedStep4Fields[0] !== null &&
+      watchedStep4Fields[1]?.trim() !== '' &&
+      watchedStep4Fields[2]?.trim() !== '' &&
+      !errorsStep4.interviewDate &&
+      !errorsStep4.interviewTime &&
+      !errorsStep4.interviewLocation
     );
   };
 
@@ -1168,19 +2116,82 @@ const CompletarDatos = () => {
     setCurrentStep(1);
   };
 
+  const handleBackToStep2 = () => {
+    setCurrentStep(2);
+  };
+
+  const handleBackToStep3 = () => {
+    setCurrentStep(3);
+  };
+
+  // Función para capturar los archivos reales del paso 3
+  const handleFilesReady = (files) => {
+    setUploadedFiles(files);
+    console.log('📁 Archivos reales capturados:', files);
+    console.log('📄 Verificación de tipos de archivo:');
+    Object.keys(files).forEach((key) => {
+      const file = files[key];
+      if (file) {
+        console.log(
+          `  ${key}:`,
+          typeof file,
+          file instanceof File ? 'File' : 'No es File',
+          file.name || 'Sin nombre',
+        );
+      }
+    });
+  };
+
+  const handleVerificationSuccess = () => {
+    setStep2Data({ verified: true });
+    setCurrentStep(3);
+  };
+
   // Effect para restaurar datos del formulario cuando se regresa al paso 1
   useEffect(() => {
     if (currentStep === 1 && formData) {
       // Usar setTimeout para asegurar que el formulario esté listo
       setTimeout(() => {
-        setValue('codigoPais', formData.codigoPais, { shouldValidate: true });
-        setValue('celular', formData.celular, { shouldValidate: true });
+        setValue('countryCode', formData.countryCode, { shouldValidate: true });
+        setValue('phone', formData.phone, { shouldValidate: true });
         setValue('password', formData.password, { shouldValidate: true });
         setValue('repeatPassword', formData.repeatPassword, { shouldValidate: true });
         setValue('acceptTerms', formData.acceptTerms, { shouldValidate: true });
       }, 100);
     }
   }, [currentStep, formData, setValue]);
+
+  // Effect para restaurar datos del formulario paso 3 cuando se regresa
+  useEffect(() => {
+    if (currentStep === 3 && step3FormData) {
+      setTimeout(() => {
+        setValueStep3('dni', step3FormData.dni, { shouldValidate: true });
+        setValueStep3('brevete', step3FormData.brevete, { shouldValidate: true });
+        setValueStep3('soat', step3FormData.soat, { shouldValidate: true });
+        setValueStep3('tarjetaPropiedad1', step3FormData.tarjetaPropiedad1, {
+          shouldValidate: true,
+        });
+        setValueStep3('tarjetaPropiedad2', step3FormData.tarjetaPropiedad2, {
+          shouldValidate: true,
+        });
+        setValueStep3('antecedentes', step3FormData.antecedentes, { shouldValidate: true });
+        setValueStep3('fotosVehiculo', step3FormData.fotosVehiculo, { shouldValidate: true });
+      }, 100);
+    }
+  }, [currentStep, step3FormData, setValueStep3]);
+
+  // Effect para restaurar datos del formulario paso 4 cuando se regresa
+  useEffect(() => {
+    if (currentStep === 4 && step4FormData) {
+      setTimeout(() => {
+        setValueStep4('interviewDate', step4FormData.interviewDate, { shouldValidate: true });
+        setValueStep4('interviewTime', step4FormData.interviewTime, { shouldValidate: true });
+        setValueStep4('interviewLocation', step4FormData.interviewLocation, {
+          shouldValidate: true,
+        });
+      }, 100);
+    }
+  }, [currentStep, step4FormData, setValueStep4]);
 
   const onSubmit = async (data) => {
     if (!isFormValid()) return;
@@ -1191,9 +2202,9 @@ const CompletarDatos = () => {
       setFormData(data);
 
       // Convertir datos a inglés para el backend
-      const fullPhoneNumber = `${data.codigoPais}${data.celular}`;
+      const fullPhoneNumber = `${data.countryCode}${data.phone}`;
       const userData = {
-        celular: fullPhoneNumber,
+        phone: fullPhoneNumber,
         password: data.password,
         firstName: tokenData?.nombres || '',
         lastName: tokenData?.apellidos || '',
@@ -1229,6 +2240,98 @@ const CompletarDatos = () => {
     } catch (error) {
       console.error('Error en el paso 1:', error);
       setAlertMessage('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+      setAlertSeverity('error');
+      setOpen(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para manejar el envío del paso 3
+  const onSubmitStep3 = async (data) => {
+    if (!isStep3FormValid()) return;
+
+    setIsLoading(true);
+    try {
+      // Guardar datos del paso 3
+      setStep3FormData(data);
+
+      console.log('Datos del paso 3:', data);
+
+      // Por ahora solo avanzamos al paso 4
+      setCurrentStep(4);
+
+      setAlertMessage('Datos guardados correctamente');
+      setAlertSeverity('success');
+      setOpen(true);
+    } catch (error) {
+      console.error('Error en el paso 3:', error);
+      setAlertMessage('Error al guardar los datos. Intenta nuevamente.');
+      setAlertSeverity('error');
+      setOpen(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para manejar el envío del paso 4
+  const onSubmitStep4 = async (data) => {
+    if (!isStep4FormValid()) return;
+
+    setIsLoading(true);
+    try {
+      // Guardar datos del paso 4
+      setStep4FormData(data);
+
+      // Console.log completo con todos los datos del formulario
+      console.log('🎯 === RESUMEN COMPLETO DEL FORMULARIO === 🎯');
+      console.log('📱 PASO 1 - REGISTRO BÁSICO:', step1Data);
+      console.log('📋 PASO 3 - DOCUMENTOS:', step3FormData);
+      console.log('📅 PASO 4 - ENTREVISTA:', data);
+      console.log('🔑 TOKEN DATA:', tokenData);
+      console.log('📅 Verificación datos entrevista:', {
+        interviewDate: data.interviewDate,
+        interviewTime: data.interviewTime,
+        interviewLocation: data.interviewLocation,
+        hasDate: !!data.interviewDate,
+        hasTime: !!data.interviewTime,
+        hasLocation: !!data.interviewLocation,
+      });
+
+      // Llamar al backend para completar el registro
+      const result = await completeRegistration(
+        {
+          phone: step1Data?.phone || 'N/A',
+          password: step1Data?.password || 'N/A',
+          acceptTerms: step1Data?.acceptTerms || false,
+        },
+        uploadedFiles, // Usar los archivos reales en lugar de los nombres
+        {
+          nombres: tokenData?.nombres || 'N/A',
+          apellidos: tokenData?.apellidos || 'N/A',
+          email: tokenData?.email || 'N/A',
+        },
+        data, // Pasar los datos de la entrevista del paso 4
+        token,
+      );
+
+      if (result.success) {
+        console.log('✅ Registro completado exitosamente:', result);
+        setAlertMessage('¡Registro completado exitosamente!');
+        setAlertSeverity('success');
+        setOpen(true);
+
+        // Marcar como completado para mostrar la pantalla de confirmación
+        setRegistrationCompleted(true);
+      } else {
+        console.error('❌ Error en el backend:', result.message);
+        setAlertMessage(result.message || 'Error al completar el registro. Intenta nuevamente.');
+        setAlertSeverity('error');
+        setOpen(true);
+      }
+    } catch (error) {
+      console.error('Error en el paso 4:', error);
+      setAlertMessage('Error al completar el registro. Intenta nuevamente.');
       setAlertSeverity('error');
       setOpen(true);
     } finally {
@@ -1333,9 +2436,115 @@ const CompletarDatos = () => {
             ) : currentStep === 2 ? (
               <VerificationStep
                 userData={step1Data}
-                onVerificationSuccess={() => setCurrentStep(3)}
+                onVerificationSuccess={handleVerificationSuccess}
                 onBack={handleBackToStep1}
               />
+            ) : currentStep === 3 ? (
+              <Step3Component
+                onSubmit={handleSubmitStep3(onSubmitStep3)}
+                onBack={handleBackToStep2}
+                register={registerStep3}
+                errors={errorsStep3}
+                isFormValid={isStep3FormValid}
+                isLoading={isLoading}
+                watchedFields={watchedStep3Fields}
+                setValueStep3={setValueStep3}
+                onFilesReady={handleFilesReady}
+              />
+            ) : currentStep === 4 ? (
+              registrationCompleted ? (
+                // Pantalla de confirmación
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    p: { xs: 3, sm: 3, md: 5 },
+                    minHeight: '400px',
+                  }}
+                >
+                  {/* Título principal */}
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      color: 'white',
+                      fontSize: { xs: '24px', sm: '28px', md: '35px' },
+                      fontWeight: 800,
+                      mb: { xs: 3, md: 4 },
+                      lineHeight: 1.2,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    ¡Bienvenido a Smart Bonos!
+                  </Typography>
+
+                  {/* Card de confirmación */}
+                  <Box
+                    sx={{
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      p: { xs: 4, md: 5 },
+                      maxWidth: '500px',
+                      width: '100%',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                    }}
+                  >
+                    {/* Icono de check verde */}
+                    <Box
+                      sx={{
+                        width: { xs: '60px', md: '80px' },
+                        height: { xs: '60px', md: '80px' },
+                        backgroundColor: '#4CAF50',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto',
+                        mb: 3,
+                        boxShadow: '0 4px 16px rgba(76, 175, 80, 0.3)',
+                      }}
+                    >
+                      <CheckCircle
+                        sx={{
+                          color: 'white',
+                          fontSize: { xs: '32px', md: '40px' },
+                        }}
+                      />
+                    </Box>
+
+                    {/* Mensaje de confirmación */}
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: '#333',
+                        fontSize: { xs: '14px', md: '16px' },
+                        lineHeight: 1.5,
+                        fontWeight: 500,
+                      }}
+                    >
+                      Has finalizado el proceso de registro, recibirás un correo confirmando la
+                      fecha y hora de tu entrevista con lo necesario. Bienvenido
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Step4Component
+                  onSubmit={handleSubmitStep4(onSubmitStep4)}
+                  onBack={handleBackToStep3}
+                  register={registerStep4}
+                  errors={errorsStep4}
+                  isFormValid={isStep4FormValid}
+                  isLoading={isLoading}
+                  watchedFields={watchedStep4Fields}
+                  setValue={setValueStep4}
+                  tokenData={tokenData}
+                  step1Data={step1Data}
+                  step3FormData={step3FormData}
+                />
+              )
             ) : (
               <Box sx={{ p: 5, textAlign: 'center' }}>
                 <Typography sx={{ color: 'white', fontSize: '18px' }}>
@@ -1347,7 +2556,12 @@ const CompletarDatos = () => {
         </Box>
       </Box>
 
-      <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+      <Snackbar
+        open={open}
+        autoHideDuration={6000}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
         <Alert onClose={handleClose} severity={alertSeverity} sx={{ width: '100%' }}>
           {alertMessage}
         </Alert>
