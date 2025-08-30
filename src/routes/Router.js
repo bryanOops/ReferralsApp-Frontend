@@ -146,6 +146,9 @@ const MuiTypography = Loadable(lazy(() => import('../views/ui-components/MuiTypo
 // authentication
 const Login = Loadable(lazy(() => import('../views/authentication/auth1/LoginNew')));
 const Login2 = Loadable(lazy(() => import('../views/authentication/auth2/Login2')));
+const SuperAdminLogin = Loadable(
+  lazy(() => import('../views/authentication/admin/SuperAdminLogin')),
+);
 const Register = Loadable(lazy(() => import('../views/authentication/auth1/RegisterNew')));
 const Register2 = Loadable(lazy(() => import('../views/authentication/auth2/Register2')));
 const ForgotPassword = Loadable(lazy(() => import('../views/authentication/auth1/ForgotPassword')));
@@ -549,6 +552,7 @@ const Router = [
       { path: '/auth/404', element: <Error /> },
       { path: '/auth/login', element: <Login /> },
       { path: '/auth/login2', element: <Login2 /> },
+      { path: '/auth/superadmin/login', element: <SuperAdminLogin /> },
       { path: '/auth/register', element: <Register /> },
       { path: '/auth/register2', element: <Register2 /> },
       { path: '/auth/forgot-password', element: <ForgotPassword /> },
